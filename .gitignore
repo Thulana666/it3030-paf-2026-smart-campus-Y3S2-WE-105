@@ -24,3 +24,12 @@ hs_err_pid*
 replay_pid*
 
 backend/src/main/resources/application.properties
+
+# IDE files
+.vscode/
+.idea/
+*.iml
+
+# Build output
+target/
+backend/target/
