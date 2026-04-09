@@ -30,9 +30,10 @@ public class CustomUserDetailsService implements UserDetailsService {
 
         // Map our Role enum to a Spring Security GrantedAuthority
         // Convention: prefix with "ROLE_" so @PreAuthorize("hasRole('ADMIN')") works
+        String password = user.getPassword() != null ? user.getPassword() : "N/A";
         return new org.springframework.security.core.userdetails.User(
                 user.getEmail(),
-                user.getPassword(),
+                password,
                 List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole().name()))
         );
     }
