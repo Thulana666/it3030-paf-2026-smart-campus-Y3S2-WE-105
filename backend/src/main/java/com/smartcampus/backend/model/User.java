@@ -37,6 +37,9 @@ public class User {
     /** Role determines endpoint access (USER / ADMIN / TECHNICIAN) */
     private Role role;
 
+    /** The authentication provider used (LOCAL or GOOGLE) */
+    private Provider provider;
+
     /** Timestamp of account creation */
     private LocalDateTime createdAt;
 }
