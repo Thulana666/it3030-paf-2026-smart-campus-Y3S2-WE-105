@@ -68,7 +68,10 @@ public class SecurityConfig {
             // Authorization rules
             .authorizeHttpRequests(auth -> auth
 
-                // Auth endpoints are fully public
+                // Auth me endpoint requires authentication to return profile details
+                .requestMatchers("/api/auth/me").authenticated()
+
+                // Other Auth endpoints are fully public
                 .requestMatchers("/api/auth/**").permitAll()
 
                 // Notification endpoints require any authenticated user

@@ -3,11 +3,14 @@ package com.smartcampus.backend.controller;
 import com.smartcampus.backend.dto.AuthResponse;
 import com.smartcampus.backend.dto.LoginRequest;
 import com.smartcampus.backend.dto.RegisterRequest;
+import com.smartcampus.backend.model.User;
+import com.smartcampus.backend.repository.UserRepository;
 import com.smartcampus.backend.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -22,6 +25,30 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService authService;
+    private final UserRepository userRepository;
+
+    /**
+     * GET /api/auth/me
+     *
+     * Returns the currently authenticated user's profile details.
+     * Requires a valid JWT token.
+     */
+    @GetMapping("/me")
+    public ResponseEntity<AuthResponse> getMe() {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("Session user not found"));
+
+        AuthResponse response = AuthResponse.builder()
+                .name(user.getName())
+                .email(user.getEmail())
+                .role(user.getRole())
+                .provider(user.getProvider())
+                .profilePicture(user.getProfilePicture())
+                .build();
+                
+        return ResponseEntity.ok(response);
+    }
 
     /**
      * POST /api/auth/register

@@ -7,6 +7,8 @@ import com.smartcampus.backend.model.Role;
 import com.smartcampus.backend.model.User;
 import com.smartcampus.backend.repository.UserRepository;
 import com.smartcampus.backend.security.JwtUtil;
+import com.smartcampus.backend.exception.InvalidLoginMethodException;
+import com.smartcampus.backend.model.Provider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -46,11 +48,14 @@ public class AuthService {
     // -------------------------------------------------------
 
     public AuthResponse register(RegisterRequest request) {
-        // Prevent duplicate accounts
-        if (userRepository.existsByEmail(request.getEmail())) {
-            throw new IllegalArgumentException(
-                    "An account with email " + request.getEmail() + " already exists");
-        }
+        // Prevent duplicate accounts dynamically based on their origin
+        userRepository.findByEmail(request.getEmail()).ifPresent(existingUser -> {
+            if (existingUser.getProvider() == Provider.GOOGLE) {
+                throw new InvalidLoginMethodException("This email is registered via Google. Please login using Google.");
+            } else {
+                throw new IllegalArgumentException("An account with email " + request.getEmail() + " already exists");
+            }
+        });
 
         // Default role to USER if not explicitly provided
         Role role = (request.getRole() != null) ? request.getRole() : Role.USER;
@@ -61,6 +66,7 @@ public class AuthService {
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))  // BCrypt hash
                 .role(role)
+                .provider(Provider.LOCAL)
                 .createdAt(LocalDateTime.now())
                 .build();
 
@@ -75,6 +81,8 @@ public class AuthService {
                 .name(user.getName())
                 .email(user.getEmail())
                 .role(user.getRole())
+                .provider(user.getProvider())
+                .profilePicture(user.getProfilePicture())
                 .build();
     }
 
@@ -83,6 +91,14 @@ public class AuthService {
     // -------------------------------------------------------
 
     public AuthResponse login(LoginRequest request) {
+        // Intercept provider boundary crossing BEFORE hitting Spring Security
+        User preflightUser = userRepository.findByEmail(request.getEmail())
+                .orElse(null);
+                
+        if (preflightUser != null && preflightUser.getProvider() == Provider.GOOGLE) {
+            throw new InvalidLoginMethodException("This account is registered via Google. Please login using Google.");
+        }
+
         // This throws BadCredentialsException if credentials are wrong —
         // caught by GlobalExceptionHandler and returned as 401
         authenticationManager.authenticate(
@@ -92,9 +108,11 @@ public class AuthService {
                 )
         );
 
-        // Credentials verified — load the full user from DB
-        User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        // Credentials verified
+        User user = preflightUser;
+        if (user == null) {
+            throw new IllegalArgumentException("User not found");
+        }
 
         UserDetails userDetails = userDetailsService.loadUserByUsername(user.getEmail());
         String token = jwtUtil.generateToken(userDetails);
@@ -104,6 +122,8 @@ public class AuthService {
                 .name(user.getName())
                 .email(user.getEmail())
                 .role(user.getRole())
+                .provider(user.getProvider())
+                .profilePicture(user.getProfilePicture())
                 .build();
     }
 }

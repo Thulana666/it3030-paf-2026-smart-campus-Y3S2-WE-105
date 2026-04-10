@@ -10,6 +10,7 @@ import com.smartcampus.backend.model.Role;
 import com.smartcampus.backend.model.User;
 import com.smartcampus.backend.repository.UserRepository;
 import com.smartcampus.backend.security.JwtUtil;
+import com.smartcampus.backend.exception.InvalidLoginMethodException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -56,6 +57,7 @@ public class GoogleAuthService {
             GoogleIdToken.Payload payload = idToken.getPayload();
             String email = payload.getEmail();
             String name = (String) payload.get("name");
+            String picture = (String) payload.get("picture");
 
             // Look up or seamlessly provision user
             Optional<User> userOptional = userRepository.findByEmail(email);
@@ -63,15 +65,20 @@ public class GoogleAuthService {
 
             if (userOptional.isPresent()) {
                 user = userOptional.get();
-                // Optionally migrate older accounts to acknowledge Google login
-                if (user.getProvider() == null) {
-                    user.setProvider(Provider.GOOGLE);
+                if (user.getProvider() == Provider.LOCAL) {
+                    throw new InvalidLoginMethodException("This email is registered with a password. Please login using your email and password.");
+                }
+                
+                // Only update profile picture if they don't have one
+                if (user.getProfilePicture() == null && picture != null) {
+                    user.setProfilePicture(picture);
                     user = userRepository.save(user);
                 }
             } else {
                 user = User.builder()
                         .name(name)
                         .email(email)
+                        .profilePicture(picture)
                         .role(Role.USER)
                         .provider(Provider.GOOGLE)
                         .createdAt(LocalDateTime.now())
@@ -89,8 +96,12 @@ public class GoogleAuthService {
                     .name(user.getName())
                     .email(user.getEmail())
                     .role(user.getRole())
+                    .provider(user.getProvider())
+                    .profilePicture(user.getProfilePicture())
                     .build();
 
+        } catch (InvalidLoginMethodException e) {
+            throw e; // Let our GlobalExceptionHandler catch this directly
         } catch (Exception e) {
             throw new RuntimeException("Google authentication failed or expired: " + e.getMessage(), e);
         }
