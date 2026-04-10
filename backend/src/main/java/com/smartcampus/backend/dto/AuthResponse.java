@@ -22,4 +22,6 @@ public class AuthResponse {
     private String name;
     private String email;
     private Role role;
+    private com.smartcampus.backend.model.Provider provider;
+    private String profilePicture;
 }
