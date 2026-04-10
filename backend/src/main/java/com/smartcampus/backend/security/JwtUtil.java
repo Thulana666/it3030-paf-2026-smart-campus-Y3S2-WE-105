@@ -42,6 +42,10 @@ public class JwtUtil {
      */
     public String generateToken(UserDetails userDetails) {
         Map<String, Object> claims = new HashMap<>();
+        // Populate custom claims for frontend role-based routing
+        if (!userDetails.getAuthorities().isEmpty()) {
+            claims.put("role", userDetails.getAuthorities().iterator().next().getAuthority().replace("ROLE_", ""));
+        }
         return buildToken(claims, userDetails.getUsername());
     }
 

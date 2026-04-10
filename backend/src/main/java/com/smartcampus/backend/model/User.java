@@ -37,6 +37,9 @@ public class User {
     /** Role determines endpoint access (USER / ADMIN / TECHNICIAN) */
     private Role role;
 
+    /** Optional profile picture URL from federated logins */
+    private String profilePicture;
+
     /** The authentication provider used (LOCAL or GOOGLE) */
     private Provider provider;
 

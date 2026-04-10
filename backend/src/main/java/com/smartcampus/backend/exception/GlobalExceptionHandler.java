@@ -76,6 +76,12 @@ public class GlobalExceptionHandler {
         return buildError(HttpStatus.UNAUTHORIZED, "Account is disabled");
     }
 
+    @ExceptionHandler(InvalidLoginMethodException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidLoginMethod(InvalidLoginMethodException ex) {
+        log.warn("Invalid login method: {}", ex.getMessage());
+        return buildError(HttpStatus.BAD_REQUEST, ex.getMessage());
+    }
+
     // -------------------------------------------------------
     // 500 — Unhandled / unexpected errors
     // -------------------------------------------------------
