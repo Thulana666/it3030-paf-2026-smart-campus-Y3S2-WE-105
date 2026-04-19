@@ -92,6 +92,24 @@ public class BookingService {
     }
 
     // -----------------------------------------------------------------------
+    // READ — all bookings (admin)
+    // -----------------------------------------------------------------------
+
+    /**
+     * Retrieves every booking in the collection regardless of student.
+     *
+     * <p>Intended for admin / staff use only. The controller layer is
+     * responsible for enforcing role-based access control before calling
+     * this method.</p>
+     *
+     * @return complete list of all {@link Booking} documents
+     */
+    public List<Booking> getAllBookings() {
+        log.debug("Admin: fetching all bookings");
+        return bookingRepository.findAll();
+    }
+
+    // -----------------------------------------------------------------------
     // UPDATE — change booking status
     // -----------------------------------------------------------------------
 

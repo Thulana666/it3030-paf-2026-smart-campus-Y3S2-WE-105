@@ -55,6 +55,25 @@ public class BookingController {
     }
 
     // -----------------------------------------------------------------------
+    // GET /api/bookings  (admin — all bookings)
+    // -----------------------------------------------------------------------
+
+    /**
+     * Retrieves all bookings in the system regardless of student.
+     *
+     * <p>Intended for admin / staff dashboards to review and act on
+     * pending reservation requests. Returns {@code 200 OK} with the
+     * complete list of {@link Booking} documents.</p>
+     *
+     * @return list of all {@link Booking} documents across all students
+     */
+    @GetMapping
+    public ResponseEntity<List<Booking>> getAllBookings() {
+        List<Booking> bookings = bookingService.getAllBookings();
+        return ResponseEntity.ok(bookings);
+    }
+
+    // -----------------------------------------------------------------------
     // GET /api/bookings/user/{studentId}
     // -----------------------------------------------------------------------
 
