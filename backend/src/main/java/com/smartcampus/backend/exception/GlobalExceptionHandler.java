@@ -62,6 +62,16 @@ public class GlobalExceptionHandler {
     }
 
     // -------------------------------------------------------
+    // 409 — Booking time-slot conflict
+    // -------------------------------------------------------
+
+    @ExceptionHandler(BookingConflictException.class)
+    public ResponseEntity<ErrorResponse> handleBookingConflict(BookingConflictException ex) {
+        log.warn("Booking conflict: {}", ex.getMessage());
+        return buildError(HttpStatus.CONFLICT, ex.getMessage());
+    }
+
+    // -------------------------------------------------------
     // 401 — Invalid credentials on login
     // -------------------------------------------------------
 
