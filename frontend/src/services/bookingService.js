@@ -31,3 +31,10 @@ export const updateBookingStatus = async (id, status) => {
 export const cancelBooking = async (id) => {
   await api.delete(`${BASE}/${id}`);
 };
+
+// ── Fetch ALL bookings – admin only (GET /api/bookings) ────────────────────────
+export const getAllBookings = async () => {
+  const response = await api.get(BASE);
+  return response.data;
+};
+

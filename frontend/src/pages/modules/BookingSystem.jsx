@@ -4,7 +4,10 @@ import {
   createBooking,
   getBookingsByUser,
   cancelBooking,
+  getAllBookings,
+  updateBookingStatus,
 } from '../../services/bookingService';
+
 
 // ── Campus resources available for booking ────────────────────────────────────
 const RESOURCES = [
@@ -69,10 +72,12 @@ export default function BookingSystem() {
 
   // ── Fetch bookings ───────────────────────────────────────────────────────────
   const fetchBookings = useCallback(async () => {
-    if (!studentId) return;
+    if (!user) return;
     try {
       setLoading(true);
-      const data = await getBookingsByUser(studentId);
+      const data = user.role === 'ADMIN' 
+        ? await getAllBookings() 
+        : await getBookingsByUser(studentId);
       // Sort newest first by startTime
       data.sort((a, b) => new Date(b.startTime) - new Date(a.startTime));
       setBookings(data);
@@ -81,7 +86,7 @@ export default function BookingSystem() {
     } finally {
       setLoading(false);
     }
-  }, [studentId]);
+  }, [user, studentId]);
 
   useEffect(() => { fetchBookings(); }, [fetchBookings]);
 
@@ -160,6 +165,17 @@ export default function BookingSystem() {
       showToast('Failed to cancel booking.', 'error');
     } finally {
       setCancellingId(null);
+    }
+  };
+
+  // ── Update booking status (Admin) ────────────────────────────────────────────
+  const handleStatusUpdate = async (id, status) => {
+    try {
+      await updateBookingStatus(id, status);
+      showToast(`Booking ${status.toLowerCase()}!`, 'success');
+      await fetchBookings();
+    } catch (err) {
+      showToast(`Failed to update booking status.`, 'error');
     }
   };
 
@@ -271,8 +287,8 @@ export default function BookingSystem() {
                   )}
                 </div>
 
-                {/* Cancel – only if PENDING */}
-                {b.status === 'PENDING' && (
+                {/* Cancel – only if PENDING and user is NOT admin */}
+                {b.status === 'PENDING' && user?.role !== 'ADMIN' && (
                   <button
                     id={`cancel-booking-${b.id}`}
                     className="bk-cancel-btn"
@@ -290,6 +306,26 @@ export default function BookingSystem() {
                       </svg>
                     )}
                   </button>
+                )}
+
+                {/* Admin controls */}
+                {b.status === 'PENDING' && user?.role === 'ADMIN' && (
+                  <div style={{ display: 'flex', gap: '8px', padding: '0 1.25rem', alignItems: 'center', flexShrink: 0 }}>
+                    <button 
+                      className="btn btn-sm btn-primary" 
+                      onClick={() => handleStatusUpdate(b.id, 'APPROVED')} 
+                      style={{ background: '#10b981', border: 'none' }}
+                    >
+                      Approve
+                    </button>
+                    <button 
+                      className="btn btn-sm btn-outline" 
+                      onClick={() => handleStatusUpdate(b.id, 'REJECTED')} 
+                      style={{ color: '#ef4444', borderColor: '#ef4444' }}
+                    >
+                      Reject
+                    </button>
+                  </div>
                 )}
               </div>
             );
