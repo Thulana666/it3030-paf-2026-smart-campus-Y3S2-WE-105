@@ -111,13 +111,20 @@ export async function getPrimaryImage(resourceId) {
       }
     });
 
+    if (response.status === 404) {
+      return null;
+    }
+
     if (!response.ok) {
       throw new Error('No primary image found');
     }
 
     return await response.json();
   } catch (error) {
-    console.error('Error fetching primary image:', error);
+    // A 404 is expected when a resource has no images yet.
+    if (error?.message !== 'No primary image found') {
+      console.error('Error fetching primary image:', error);
+    }
     throw error;
   }
 }

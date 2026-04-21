@@ -2,6 +2,7 @@ import React, { useState, useContext, useEffect } from 'react';
 import { AuthContext } from '../../context/AuthContext';
 import * as resourceService from '../../services/resourceService';
 import * as assignmentService from '../../services/assignmentService';
+import * as imageService from '../../services/imageService';
 import ImageUploadModal from '../../components/ImageUploadModal';
 import ImageGallery from '../../components/ImageGallery';
 
@@ -45,6 +46,7 @@ const Facilities = () => {
   });
 
   const [imagePreview, setImagePreview] = useState(null);
+  const [selectedImageFile, setSelectedImageFile] = useState(null);
   const [statusChangeResource, setStatusChangeResource] = useState(null);
 
   // Load resources
@@ -71,7 +73,27 @@ const Facilities = () => {
         // User: View only ACTIVE resources
         data = await resourceService.getActiveResources();
       }
-      setResources(data);
+      const resourcesWithImages = await Promise.all(
+        data.map(async (resource) => {
+          if (resource.imageUrl) {
+            return resource;
+          }
+
+          try {
+            const images = await imageService.getResourceImages(resource.id);
+            const displayImage = images.find((img) => img.isPrimary) || images[0];
+            const primaryImageUrl = imageService.getImageDataUrl(displayImage);
+            return {
+              ...resource,
+              imageUrl: primaryImageUrl || ''
+            };
+          } catch (imageError) {
+            return resource;
+          }
+        })
+      );
+
+      setResources(resourcesWithImages);
     } catch (err) {
       console.error('Error loading resources:', err);
       setMessage({ type: 'error', text: 'Failed to load resources' });
@@ -150,13 +172,10 @@ const Facilities = () => {
         return;
       }
 
-      // Convert to base64
+      // Keep the original file for upload API and show preview
+      setSelectedImageFile(file);
       const reader = new FileReader();
       reader.onloadend = () => {
-        setFormData(prev => ({
-          ...prev,
-          imageUrl: reader.result
-        }));
         setImagePreview(reader.result);
         setMessage({ type: '', text: '' });
       };
@@ -176,17 +195,30 @@ const Facilities = () => {
       setLoading(true);
       const resourceData = {
         ...formData,
+        imageUrl: '',
         capacity: parseInt(formData.capacity)
       };
 
+      let savedResource;
       if (view === 'edit' && editingResourceId) {
         // Update existing resource
-        await resourceService.updateResource(editingResourceId, resourceData);
+        savedResource = await resourceService.updateResource(editingResourceId, resourceData);
         setMessage({ type: 'success', text: 'Resource updated successfully!' });
       } else {
         // Create new resource
-        await resourceService.createResource(resourceData);
+        savedResource = await resourceService.createResource(resourceData);
         setMessage({ type: 'success', text: 'Resource created successfully!' });
+      }
+
+      if (selectedImageFile) {
+        const createdResourceId = savedResource?.id || savedResource?.resourceId || savedResource?.data?.id;
+        const targetResourceId = view === 'edit' && editingResourceId
+          ? editingResourceId
+          : createdResourceId;
+
+        if (targetResourceId) {
+          await imageService.uploadResourceImage(targetResourceId, selectedImageFile, '', true);
+        }
       }
 
       setFormData({
@@ -205,13 +237,18 @@ const Facilities = () => {
         imageUrl: ''
       });
       setImagePreview(null);
+      setSelectedImageFile(null);
       setEditingResourceId(null);
 
       // Reload resources
       await loadResources();
       setView('list');
     } catch (err) {
-      const errorMsg = err.response?.data?.error || 'Failed to save resource';
+      const errorMsg =
+        err.response?.data?.error ||
+        err.response?.data?.message ||
+        err.message ||
+        'Failed to save resource';
       setMessage({ type: 'error', text: errorMsg });
       console.error('Error saving resource:', err);
     } finally {
@@ -237,7 +274,10 @@ const Facilities = () => {
     });
     if (resource.imageUrl) {
       setImagePreview(resource.imageUrl);
+    } else {
+      setImagePreview(null);
     }
+    setSelectedImageFile(null);
     setEditingResourceId(resource.id);
     setView('edit');
     setMessage({ type: '', text: '' });
@@ -1345,6 +1385,7 @@ const Facilities = () => {
                 imageUrl: ''
               });
               setImagePreview(null);
+              setSelectedImageFile(null);
             }}
             className="btn btn-outline"
             style={{ padding: '0.5rem 1rem' }}
@@ -1703,6 +1744,7 @@ const Facilities = () => {
                   type="button"
                   onClick={() => {
                     setImagePreview(null);
+                    setSelectedImageFile(null);
                     setFormData(prev => ({ ...prev, imageUrl: '' }));
                     document.getElementById('imageInput').value = '';
                   }}
@@ -1783,6 +1825,7 @@ const Facilities = () => {
                   imageUrl: ''
                 });
                 setImagePreview(null);
+                setSelectedImageFile(null);
               }}
               className="btn btn-outline"
               style={{ flex: 1, padding: '0.75rem' }}
