@@ -12,6 +12,13 @@ const Facilities = () => {
   const [editingResourceId, setEditingResourceId] = useState(null);
   
   const isAdmin = user?.role === 'ADMIN';
+  const isTechnician = user?.role === 'TECHNICIAN';
+  const isUser = user?.role === 'USER';
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('ALL');
+  const [catalogueScope, setCatalogueScope] = useState(
+    user?.role === 'TECHNICIAN' ? 'MAINTENANCE' : 'ALL'
+  );
 
   // Form state
   const [formData, setFormData] = useState({
@@ -36,12 +43,23 @@ const Facilities = () => {
   // Load resources
   useEffect(() => {
     loadResources();
-  }, []);
+  }, [user?.role]);
 
   const loadResources = async () => {
     try {
       setLoading(true);
-      const data = isAdmin ? await resourceService.getAllResources() : await resourceService.getActiveResources();
+      let data;
+
+      if (isAdmin) {
+        // Admin: View ALL resources
+        data = await resourceService.getAllResources();
+      } else if (isTechnician) {
+        // Technician: View only maintenance resources
+        data = await resourceService.getResourcesByStatus('UNDER_MAINTENANCE');
+      } else {
+        // User: View only ACTIVE resources
+        data = await resourceService.getActiveResources();
+      }
       setResources(data);
     } catch (err) {
       console.error('Error loading resources:', err);
@@ -229,6 +247,85 @@ const Facilities = () => {
         return '#6366f1';
     }
   };
+
+  useEffect(() => {
+    if (isTechnician) {
+      setCatalogueScope('MAINTENANCE');
+      setStatusFilter('ALL');
+      return;
+    }
+
+    setCatalogueScope('ALL');
+    setStatusFilter('ALL');
+  }, [isTechnician, user?.role]);
+
+  const roleSummary = isAdmin
+    ? 'Access the full resource catalogue, including inactive and maintenance items, plus management actions.'
+    : isTechnician
+      ? 'Review maintenance items and repair-related resources from a technician-focused catalogue view.'
+      : 'Browse all active campus resources with details, capacity, location, availability, images, and live status.';
+
+  const scopeOptions = isTechnician
+    ? [
+        { value: 'MAINTENANCE', label: 'Under Maintenance' },
+        { value: 'ASSIGNED', label: 'Assigned Repairs' }
+      ]
+    : isAdmin
+      ? [
+          { value: 'ALL', label: 'All Resources' },
+          { value: 'MANAGEMENT', label: 'Management View' }
+        ]
+      : [
+          { value: 'ALL', label: 'Active Catalogue' }
+        ];
+
+  const filteredResources = resources.filter((resource) => {
+    if (isTechnician) {
+      if (catalogueScope === 'MAINTENANCE' && resource.status !== 'UNDER_MAINTENANCE') {
+        return false;
+      }
+
+      if (catalogueScope === 'ASSIGNED') {
+        return false;
+      }
+    }
+
+    if (isUser && resource.status !== 'ACTIVE') {
+      return false;
+    }
+
+    if (statusFilter !== 'ALL' && resource.status !== statusFilter) {
+      return false;
+    }
+
+    const searchableText = [
+      resource.name,
+      resource.resourceCode,
+      resource.category,
+      resource.type,
+      resource.building,
+      resource.floor,
+      resource.location,
+      resource.status
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase();
+
+    return searchableText.includes(searchTerm.trim().toLowerCase());
+  });
+
+  const emptyStateTitle = isTechnician && catalogueScope === 'ASSIGNED'
+    ? 'No Assigned Repair Resources'
+    : 'No Resources Found';
+
+  const emptyStateDescription = isTechnician && catalogueScope === 'ASSIGNED'
+    ? 'Assigned repair-linked resources will appear here once incident assignment is connected to the catalogue.'
+    : isAdmin
+      ? 'Create the first resource to get started.'
+      : isTechnician
+        ? 'No maintenance resources matched the current filters.'
+        : 'Check back later for available resources.';
 
   // Create/Edit View
   if ((view === 'create' || view === 'edit') && isAdmin) {
@@ -715,7 +812,7 @@ const Facilities = () => {
         <div>
           <h1 style={{ marginBottom: '0.5rem', color: 'var(--primary)' }}>Campus Facilities</h1>
           <p style={{ color: 'var(--text-muted)' }}>
-            Track the real-time availability and maintenance status of all campus infrastructure.
+            {roleSummary}
           </p>
         </div>
         {isAdmin && (
@@ -729,24 +826,107 @@ const Facilities = () => {
         )}
       </div>
 
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+          gap: '1rem',
+          marginBottom: '1.5rem',
+          padding: '1rem',
+          borderRadius: '12px',
+          background: 'rgba(255, 255, 255, 0.35)',
+          border: '1px solid rgba(99, 102, 241, 0.08)'
+        }}
+      >
+        <div>
+          <label style={{ display: 'block', marginBottom: '0.4rem', color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: '600' }}>
+            Search Resources
+          </label>
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Name, code, category, building..."
+            style={{
+              width: '100%',
+              padding: '0.8rem 0.9rem',
+              borderRadius: '8px',
+              border: '1px solid rgba(99, 102, 241, 0.15)',
+              background: 'rgba(255,255,255,0.7)',
+              color: 'var(--text-dark)'
+            }}
+          />
+        </div>
+
+        {isAdmin && (
+          <div>
+            <label style={{ display: 'block', marginBottom: '0.4rem', color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: '600' }}>
+              Status Filter
+            </label>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '0.8rem 0.9rem',
+                borderRadius: '8px',
+                border: '1px solid rgba(99, 102, 241, 0.15)',
+                background: 'rgba(255,255,255,0.7)',
+                color: 'var(--text-dark)'
+              }}
+            >
+              <option value="ALL">All Statuses</option>
+              <option value="ACTIVE">ACTIVE</option>
+              <option value="UNDER_MAINTENANCE">UNDER_MAINTENANCE</option>
+              <option value="OUT_OF_SERVICE">OUT_OF_SERVICE</option>
+              <option value="INACTIVE">INACTIVE</option>
+            </select>
+          </div>
+        )}
+
+        <div>
+          <label style={{ display: 'block', marginBottom: '0.4rem', color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: '600' }}>
+            View Scope
+          </label>
+          <select
+            value={catalogueScope}
+            onChange={(e) => setCatalogueScope(e.target.value)}
+            disabled={scopeOptions.length === 1}
+            style={{
+              width: '100%',
+              padding: '0.8rem 0.9rem',
+              borderRadius: '8px',
+              border: '1px solid rgba(99, 102, 241, 0.15)',
+              background: 'rgba(255,255,255,0.7)',
+              color: 'var(--text-dark)',
+              opacity: scopeOptions.length === 1 ? 0.8 : 1
+            }}
+          >
+            {scopeOptions.map((option) => (
+              <option key={option.value} value={option.value}>{option.label}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
       {loading && (
         <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
           Loading resources...
         </div>
       )}
 
-      {!loading && resources.length === 0 && (
+      {!loading && filteredResources.length === 0 && (
         <div className="empty-state" style={{ background: 'rgba(255,255,255,0.4)', borderRadius: '15px' }}>
-          <h3 style={{ color: 'var(--text-dark)' }}>No Resources Found</h3>
+          <h3 style={{ color: 'var(--text-dark)' }}>{emptyStateTitle}</h3>
           <p style={{ marginTop: '0.5rem' }}>
-            {isAdmin ? 'Create the first resource to get started.' : 'Check back later for available resources.'}
+            {emptyStateDescription}
           </p>
         </div>
       )}
 
-      {!loading && resources.length > 0 && (
+      {!loading && filteredResources.length > 0 && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '1.5rem' }}>
-          {resources.map(resource => (
+          {filteredResources.map(resource => (
             <div 
               key={resource.id} 
               className="card" 
