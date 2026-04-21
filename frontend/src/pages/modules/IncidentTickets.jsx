@@ -1,6 +1,9 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const IncidentTickets = () => {
+  const navigate = useNavigate();
+
   return (
     <div className="glass" style={{ padding: '2rem', borderRadius: '15px' }}>
       <h1 style={{ marginBottom: '1rem', color: 'var(--primary)' }}>Incident Tickets</h1>
@@ -9,7 +12,7 @@ const IncidentTickets = () => {
       </p>
       
       <div className="empty-state" style={{ background: 'rgba(255,255,255,0.4)', borderRadius: '15px' }}>
-        <button className="btn btn-primary" style={{ padding: '0.8rem 2rem' }}>File New Report</button>
+        <button onClick={() => navigate('/dashboard/tickets/create')} className="btn btn-primary" style={{ padding: '0.8rem 2rem' }}>File New Report</button>
       </div>
     </div>
   );
