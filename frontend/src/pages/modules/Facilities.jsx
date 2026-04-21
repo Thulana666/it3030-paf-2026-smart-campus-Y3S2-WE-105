@@ -1,11 +1,14 @@
 import React, { useState, useContext, useEffect } from 'react';
 import { AuthContext } from '../../context/AuthContext';
 import * as resourceService from '../../services/resourceService';
+import * as assignmentService from '../../services/assignmentService';
 
 const Facilities = () => {
   const { user } = useContext(AuthContext);
-  const [view, setView] = useState('list'); // list, create, or edit
+  const [view, setView] = useState('list'); // list, create, edit, or assigned-repairs
   const [resources, setResources] = useState([]);
+  const [assignments, setAssignments] = useState([]);
+  const [assignedResourceMap, setAssignedResourceMap] = useState({});
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [selectedImageModal, setSelectedImageModal] = useState(null);
@@ -42,8 +45,12 @@ const Facilities = () => {
 
   // Load resources
   useEffect(() => {
-    loadResources();
-  }, [user?.role]);
+    if (isTechnician && view === 'assigned-repairs') {
+      loadAssignedRepairs();
+    } else {
+      loadResources();
+    }
+  }, [user?.role, view]);
 
   const loadResources = async () => {
     try {
@@ -66,6 +73,53 @@ const Facilities = () => {
       setMessage({ type: 'error', text: 'Failed to load resources' });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadAssignedRepairs = async () => {
+    try {
+      setLoading(true);
+      const assignmentsData = await assignmentService.getMyAssignments();
+      setAssignments(assignmentsData);
+
+      // Create a map for quick resource lookup
+      const resourceMap = {};
+      for (const assignment of assignmentsData) {
+        try {
+          const resource = await resourceService.getResourceById(assignment.resourceId);
+          resourceMap[assignment.id] = resource;
+        } catch (err) {
+          console.log('Resource not found for assignment:', assignment.resourceId);
+        }
+      }
+      setAssignedResourceMap(resourceMap);
+    } catch (err) {
+      console.error('Error loading assigned repairs:', err);
+      setMessage({ type: 'error', text: 'Failed to load assigned repairs' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpdateAssignmentStatus = async (assignmentId, newStatus) => {
+    try {
+      await assignmentService.updateAssignmentStatus(assignmentId, newStatus);
+      setMessage({ type: 'success', text: `Assignment status updated to ${newStatus}` });
+      loadAssignedRepairs();
+    } catch (err) {
+      console.error('Error updating assignment status:', err);
+      setMessage({ type: 'error', text: 'Failed to update assignment status' });
+    }
+  };
+
+  const handleAddAssignmentNotes = async (assignmentId, notes) => {
+    try {
+      await assignmentService.updateAssignmentNotes(assignmentId, notes);
+      setMessage({ type: 'success', text: 'Notes added successfully' });
+      loadAssignedRepairs();
+    } catch (err) {
+      console.error('Error adding notes:', err);
+      setMessage({ type: 'error', text: 'Failed to add notes' });
     }
   };
 
@@ -805,26 +859,403 @@ const Facilities = () => {
     );
   }
 
-  // List View
-  return (
-    <div className="glass" style={{ padding: '2rem', borderRadius: '15px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-        <div>
-          <h1 style={{ marginBottom: '0.5rem', color: 'var(--primary)' }}>Campus Facilities</h1>
-          <p style={{ color: 'var(--text-muted)' }}>
-            {roleSummary}
-          </p>
-        </div>
-        {isAdmin && (
+  // Assigned Repairs View - Technician Only
+  if (view === 'assigned-repairs' && isTechnician) {
+    return (
+      <div className="glass" style={{ padding: '2rem', borderRadius: '15px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+          <div>
+            <h1 style={{ marginBottom: '0.5rem', color: 'var(--primary)' }}>📋 Assigned Repairs</h1>
+            <p style={{ color: 'var(--text-muted)' }}>
+              Track resources assigned to you for repair and maintenance.
+            </p>
+          </div>
           <button 
-            onClick={() => setView('create')}
-            className="btn btn-primary"
-            style={{ padding: '0.75rem 1.5rem' }}
+            onClick={() => setView('list')}
+            className="btn btn-outline"
+            style={{ 
+              padding: '0.75rem 1.5rem',
+              borderColor: 'var(--primary-color)',
+              color: 'var(--primary-color)'
+            }}
           >
-            + Add Resource
+            ← Back to Maintenance
           </button>
+        </div>
+
+        {message.text && (
+          <div style={{
+            padding: '1rem',
+            marginBottom: '1.5rem',
+            borderRadius: '8px',
+            background: message.type === 'success' 
+              ? 'rgba(34, 197, 94, 0.1)' 
+              : 'rgba(239, 68, 68, 0.1)',
+            border: `1px solid ${message.type === 'success' ? '#22c55e' : '#ef4444'}`,
+            color: message.type === 'success' ? '#22c55e' : '#ef4444'
+          }}>
+            {message.text}
+          </div>
+        )}
+
+        {loading && (
+          <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+            Loading assigned repairs...
+          </div>
+        )}
+
+        {!loading && assignments.length === 0 && (
+          <div className="empty-state" style={{ background: 'rgba(255,255,255,0.4)', borderRadius: '15px' }}>
+            <h3 style={{ color: 'var(--text-dark)' }}>No Assigned Repairs</h3>
+            <p style={{ marginTop: '0.5rem' }}>
+              You currently have no repair assignments. New assignments will appear here.
+            </p>
+          </div>
+        )}
+
+        {!loading && assignments.length > 0 && (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))', gap: '1.5rem' }}>
+            {assignments.map(assignment => {
+              const resource = assignedResourceMap[assignment.id];
+              const getPriorityColor = (priority) => {
+                switch(priority) {
+                  case 'CRITICAL': return '#dc2626';
+                  case 'HIGH': return '#ea580c';
+                  case 'MEDIUM': return '#eab308';
+                  case 'LOW': return '#3b82f6';
+                  default: return '#6366f1';
+                }
+              };
+
+              const getAssignmentStatusColor = (status) => {
+                switch(status) {
+                  case 'ASSIGNED': return '#e0e7ff';
+                  case 'IN_PROGRESS': return '#fef3c7';
+                  case 'COMPLETED': return '#d1fae5';
+                  case 'CANCELLED': return '#f3f4f6';
+                  default: return '#f3f4f6';
+                }
+              };
+
+              return (
+                <div 
+                  key={assignment.id} 
+                  className="card"
+                  style={{
+                    background: getAssignmentStatusColor(assignment.status),
+                    borderRadius: '12px',
+                    overflow: 'hidden',
+                    border: '2px solid rgba(99, 102, 241, 0.1)',
+                    transition: 'transform 0.2s, box-shadow 0.2s'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 10px 25px rgba(0, 0, 0, 0.1)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = 'none';
+                  }}
+                >
+                  {/* Resource Image */}
+                  {resource && resource.imageUrl ? (
+                    <div
+                      onClick={() => setSelectedImageModal(resource)}
+                      style={{
+                        position: 'relative',
+                        width: '100%',
+                        height: '180px',
+                        overflow: 'hidden',
+                        cursor: 'pointer',
+                        background: 'rgba(0,0,0,0.05)',
+                        borderBottom: '1px solid rgba(99, 102, 241, 0.2)'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.opacity = '0.9'}
+                      onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
+                    >
+                      <img 
+                        src={resource.imageUrl} 
+                        alt={resource.name}
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover'
+                        }}
+                      />
+                    </div>
+                  ) : (
+                    <div
+                      style={{
+                        width: '100%',
+                        height: '180px',
+                        background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexDirection: 'column',
+                        borderBottom: '1px solid rgba(99, 102, 241, 0.2)'
+                      }}
+                    >
+                      <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>🏢</div>
+                      <p style={{ margin: 0, color: 'rgba(99, 102, 241, 0.6)', fontSize: '0.9rem' }}>
+                        No Image
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Content */}
+                  <div style={{ padding: '1.5rem' }}>
+                    {/* Header */}
+                    <div style={{ marginBottom: '1rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '0.5rem' }}>
+                        <h3 style={{ margin: 0, color: 'var(--text-dark)', fontSize: '1.1rem' }}>
+                          {resource?.name || 'Resource Not Found'}
+                        </h3>
+                        <span 
+                          style={{
+                            background: getPriorityColor(assignment.priority),
+                            color: 'white',
+                            padding: '0.3rem 0.8rem',
+                            borderRadius: '12px',
+                            fontSize: '0.75rem',
+                            fontWeight: '600',
+                            whiteSpace: 'nowrap'
+                          }}
+                        >
+                          {assignment.priority}
+                        </span>
+                      </div>
+                      <p style={{ margin: '0.25rem 0 0 0', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                        Issue: {assignment.issueType}
+                      </p>
+                    </div>
+
+                    {/* Description */}
+                    <div style={{ 
+                      background: 'rgba(255,255,255,0.5)',
+                      padding: '0.75rem',
+                      borderRadius: '8px',
+                      marginBottom: '1rem',
+                      borderLeft: '3px solid var(--primary-color)'
+                    }}>
+                      <p style={{ margin: 0, color: 'var(--text-dark)', fontSize: '0.9rem', lineHeight: '1.4' }}>
+                        {assignment.description}
+                      </p>
+                    </div>
+
+                    {/* Details Grid */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '1rem', fontSize: '0.85rem' }}>
+                      <div>
+                        <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: '600' }}>STATUS</p>
+                        <p style={{ margin: '0.25rem 0 0 0', color: 'var(--text-dark)', fontWeight: '500' }}>
+                          {assignment.status}
+                        </p>
+                      </div>
+                      <div>
+                        <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: '600' }}>DUE DATE</p>
+                        <p style={{ margin: '0.25rem 0 0 0', color: 'var(--text-dark)', fontWeight: '500' }}>
+                          {assignment.dueDate ? new Date(assignment.dueDate).toLocaleDateString() : 'Not set'}
+                        </p>
+                      </div>
+                      {resource && (
+                        <>
+                          <div>
+                            <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: '600' }}>LOCATION</p>
+                            <p style={{ margin: '0.25rem 0 0 0', color: 'var(--text-dark)', fontWeight: '500' }}>
+                              {resource.building}
+                            </p>
+                          </div>
+                          <div>
+                            <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: '600' }}>CAPACITY</p>
+                            <p style={{ margin: '0.25rem 0 0 0', color: 'var(--text-dark)', fontWeight: '500' }}>
+                              {resource.capacity} persons
+                            </p>
+                          </div>
+                        </>
+                      )}
+                    </div>
+
+                    {/* Notes Section */}
+                    {assignment.notes && (
+                      <div style={{
+                        background: 'rgba(99, 102, 241, 0.05)',
+                        padding: '0.75rem',
+                        borderRadius: '8px',
+                        marginBottom: '1rem',
+                        borderLeft: '3px solid #3b82f6'
+                      }}>
+                        <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: '600', marginBottom: '0.25rem' }}>NOTES</p>
+                        <p style={{ margin: 0, color: 'var(--text-dark)', fontSize: '0.9rem', lineHeight: '1.4' }}>
+                          {assignment.notes}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Action Buttons */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                      <button
+                        onClick={() => {
+                          const newStatus = assignment.status === 'ASSIGNED' ? 'IN_PROGRESS' : 
+                                           assignment.status === 'IN_PROGRESS' ? 'COMPLETED' : 
+                                           assignment.status;
+                          if (newStatus !== assignment.status) {
+                            handleUpdateAssignmentStatus(assignment.id, newStatus);
+                          }
+                        }}
+                        style={{
+                          padding: '0.6rem 1rem',
+                          background: getPriorityColor(assignment.priority),
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          fontSize: '0.85rem',
+                          fontWeight: '600',
+                          transition: 'opacity 0.2s'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.opacity = '0.9'}
+                        onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
+                        disabled={assignment.status === 'COMPLETED' || assignment.status === 'CANCELLED'}
+                      >
+                        {assignment.status === 'ASSIGNED' ? 'Start Work' : 
+                         assignment.status === 'IN_PROGRESS' ? 'Mark Complete' :
+                         'Completed'}
+                      </button>
+                      <button
+                        onClick={() => {
+                          const notes = prompt('Add repair notes:', assignment.notes || '');
+                          if (notes !== null) {
+                            handleAddAssignmentNotes(assignment.id, notes);
+                          }
+                        }}
+                        style={{
+                          padding: '0.6rem 1rem',
+                          background: '#3b82f6',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          fontSize: '0.85rem',
+                          fontWeight: '600',
+                          transition: 'opacity 0.2s'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.opacity = '0.9'}
+                        onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
+                      >
+                        📝 Add Notes
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Image Modal for assigned repairs */}
+        {selectedImageModal && (
+          <div
+            onClick={() => setSelectedImageModal(null)}
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(0, 0, 0, 0.8)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 1000,
+              padding: '1rem'
+            }}
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                background: 'white',
+                borderRadius: '15px',
+                overflow: 'hidden',
+                maxWidth: '90vw',
+                maxHeight: '90vh',
+                boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
+                display: 'flex',
+                flexDirection: 'column'
+              }}
+            >
+              <div style={{ flex: 1, overflow: 'auto', background: '#000' }}>
+                <img 
+                  src={selectedImageModal.imageUrl} 
+                  alt={selectedImageModal.name}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'contain'
+                  }}
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                  }}
+                />
+              </div>
+              <div style={{
+                padding: '1rem',
+                borderTop: '1px solid rgba(99, 102, 241, 0.1)',
+                background: 'rgba(99, 102, 241, 0.05)',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center'
+              }}>
+                <button
+                  onClick={() => setSelectedImageModal(null)}
+                  className="btn btn-primary"
+                  style={{ padding: '0.5rem 1.5rem' }}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
+    );
+  }
+
+  // List View
+  if (view === 'list' || (!isTechnician && view !== 'assigned-repairs' && view !== 'create' && view !== 'edit')) {
+    return (
+      <div className="glass" style={{ padding: '2rem', borderRadius: '15px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+          <div>
+            <h1 style={{ marginBottom: '0.5rem', color: 'var(--primary)' }}>Campus Facilities</h1>
+            <p style={{ color: 'var(--text-muted)' }}>
+              {roleSummary}
+            </p>
+          </div>
+          <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+            {isTechnician && (
+              <button 
+                onClick={() => setView('assigned-repairs')}
+                className="btn btn-outline"
+                style={{ 
+                  padding: '0.75rem 1.5rem',
+                  borderColor: 'var(--primary-color)',
+                  color: 'var(--primary-color)'
+                }}
+              >
+                📋 My Assigned Repairs
+              </button>
+            )}
+            {isAdmin && (
+              <button 
+                onClick={() => setView('create')}
+                className="btn btn-primary"
+                style={{ padding: '0.75rem 1.5rem' }}
+              >
+                + Add Resource
+              </button>
+            )}
+          </div>
+        </div>
 
       <div
         style={{
@@ -1514,6 +1945,7 @@ const Facilities = () => {
       )}
     </div>
   );
+  }
 };
 
 export default Facilities;
