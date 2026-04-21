@@ -1,70 +1,147 @@
-import React, { useContext } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { ticketService } from '../../services/ticketService';
 import { AuthContext } from '../../context/AuthContext';
 
 const TechnicianDashboard = () => {
   const { user } = useContext(AuthContext);
   const navigate = useNavigate();
+  const [tickets, setTickets] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchTickets = async () => {
+      try {
+        const data = await ticketService.getTechnicianTickets();
+        setTickets(data);
+      } catch (err) {
+        console.error('Error fetching technician tickets:', err);
+        setError('Failed to load tickets. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTickets();
+  }, []);
+
+  const getPriorityColor = (priority) => {
+    switch (priority) {
+      case 'URGENT': return 'bg-red-100 text-red-800 border-red-200';
+      case 'HIGH': return 'bg-orange-100 text-orange-800 border-orange-200';
+      case 'MEDIUM': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'LOW': return 'bg-green-100 text-green-800 border-green-200';
+      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'OPEN': return 'bg-blue-100 text-blue-800';
+      case 'IN_PROGRESS': return 'bg-purple-100 text-purple-800';
+      case 'RESOLVED': return 'bg-emerald-100 text-emerald-800';
+      case 'CLOSED': return 'bg-gray-100 text-gray-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
 
   return (
-    <div className="page-container" style={{ animation: 'slideUp 0.5s ease backwards' }}>
-      
-      {/* Header Section */}
-      <div className="glass" style={{ padding: '2.5rem', borderRadius: '20px', marginBottom: '2rem', borderLeft: '6px solid var(--general-color)' }}>
-        <h1 style={{ fontSize: '2.2rem', marginBottom: '0.5rem', color: 'var(--text-dark)' }}>Technician Portal</h1>
-        <p style={{ color: 'var(--text-muted)', fontSize: '1.05rem' }}>
-          Maintenance & Operations active. <span style={{ color: 'var(--general-color)', fontWeight: '600' }}>Welcome, {user?.name || user?.email}</span> — Operations Hub is ready.
-        </p>
+    <div className="max-w-7xl mx-auto p-6 space-y-8 animate-[slideUp_0.5s_ease-out]">
+      {/* Header */}
+      <div className="bg-white/80 backdrop-blur-lg p-8 rounded-2xl shadow-sm border border-gray-100 flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Technician Portal</h1>
+          <p className="text-gray-500">
+            Welcome back, <span className="font-semibold text-blue-600">{user?.name || user?.email}</span>. Here are your assigned tickets.
+          </p>
+        </div>
+        <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
+          <p className="text-sm text-blue-600 font-medium">Total Assigned</p>
+          <p className="text-3xl font-bold text-blue-700">{tickets.length}</p>
+        </div>
       </div>
 
-      {/* Technician Module Grid */}
-      <div style={{ display: 'grid', gap: '1.5rem', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))' }}>
+      {/* Tickets Table */}
+      <div className="bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden">
+        <div className="p-6 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
+          <h2 className="text-xl font-bold text-gray-800">Assigned Tickets</h2>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="text-sm px-4 py-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors shadow-sm font-medium text-gray-600"
+          >
+            Refresh List
+          </button>
+        </div>
         
-        {/* Maintenance Tasks Card */}
-        <div className="card glass" style={{ padding: '2rem', borderRadius: '15px', display: 'flex', flexDirection: 'column', gap: '1rem', transition: 'transform 0.2s', cursor: 'default' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ background: 'rgba(239, 68, 68, 0.1)', padding: '12px', borderRadius: '12px', color: '#ef4444' }}>
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>
-            </div>
-            <h3 style={{ fontSize: '1.3rem', color: 'var(--text-dark)' }}>Assigned Tickets</h3>
+        {loading ? (
+          <div className="p-12 text-center">
+            <div className="inline-block animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full mb-4"></div>
+            <p className="text-gray-500 font-medium">Loading your assignments...</p>
           </div>
-          <p style={{ color: 'var(--text-muted)', flex: 1 }}>Resolve infrastructure failures, manage hardware repairs, and track operational incident resolutions.</p>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto' }}>
-            <span className="badge badge-ticket" style={{ color: '#ef4444', background: 'rgba(239,68,68,0.1)' }}>No Pending</span>
-            <button onClick={() => navigate('/dashboard/incident-tickets')} className="btn btn-outline" style={{ padding: '0.4rem 1rem', borderColor: '#ef4444', color: '#ef4444' }}>Worklist</button>
+        ) : error ? (
+          <div className="p-8 text-center text-red-500 bg-red-50">
+            <p className="font-medium">{error}</p>
           </div>
-        </div>
-
-        {/* Inventory Hub Card */}
-        <div className="card glass" style={{ padding: '2rem', borderRadius: '15px', display: 'flex', flexDirection: 'column', gap: '1rem', transition: 'transform 0.2s', cursor: 'default' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ background: 'rgba(59, 130, 246, 0.1)', padding: '12px', borderRadius: '12px', color: '#3b82f6' }}>
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 8V20a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8"></path><path d="M1 3h22v5H1z"></path><path d="M10 12h4"></path></svg>
-            </div>
-            <h3 style={{ fontSize: '1.3rem', color: 'var(--text-dark)' }}>Inventory & Stock</h3>
+        ) : tickets.length === 0 ? (
+          <div className="p-16 text-center text-gray-500">
+            <svg className="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+            <p className="text-lg font-medium text-gray-900 mb-1">No assigned tickets</p>
+            <p className="text-gray-500">You're all caught up! Enjoy your break.</p>
           </div>
-          <p style={{ color: 'var(--text-muted)', flex: 1 }}>Manage logistical supplies, track electrical component stock, and oversee hardware parts inventory.</p>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto' }}>
-            <span className="badge badge-booking" style={{ background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6' }}>Stable Levels</span>
-            <button onClick={() => navigate('/dashboard/inventory')} className="btn btn-outline" style={{ padding: '0.4rem 1rem', borderColor: '#3b82f6', color: '#3b82f6' }}>Supplies</button>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-gray-50 text-gray-600 text-sm uppercase tracking-wider">
+                  <th className="p-4 font-semibold">Ticket ID</th>
+                  <th className="p-4 font-semibold">Title</th>
+                  <th className="p-4 font-semibold">Priority</th>
+                  <th className="p-4 font-semibold">Status</th>
+                  <th className="p-4 font-semibold text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {tickets.map((ticket) => (
+                  <tr 
+                    key={ticket.id} 
+                    className="hover:bg-gray-50/80 transition-colors group cursor-pointer"
+                    onClick={() => navigate(`/dashboard/tickets/${ticket.id}`)}
+                  >
+                    <td className="p-4">
+                      <span className="font-mono text-sm text-gray-500">#{ticket.id}</span>
+                    </td>
+                    <td className="p-4">
+                      <p className="font-medium text-gray-900 group-hover:text-blue-600 transition-colors">{ticket.title}</p>
+                      <p className="text-sm text-gray-500 truncate max-w-xs">{ticket.description}</p>
+                    </td>
+                    <td className="p-4">
+                      <span className={`px-3 py-1 rounded-full text-xs font-bold border ${getPriorityColor(ticket.priority)}`}>
+                        {ticket.priority}
+                      </span>
+                    </td>
+                    <td className="p-4">
+                      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(ticket.status)}`}>
+                        {ticket.status.replace('_', ' ')}
+                      </span>
+                    </td>
+                    <td className="p-4 text-right">
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/dashboard/tickets/${ticket.id}`);
+                        }}
+                        className="text-blue-600 hover:text-blue-800 font-medium text-sm px-3 py-1.5 rounded-lg hover:bg-blue-50 transition-colors"
+                      >
+                        View Details →
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        </div>
-
-        {/* Operations Schedule Card */}
-        <div className="card glass" style={{ padding: '2rem', borderRadius: '15px', display: 'flex', flexDirection: 'column', gap: '1rem', transition: 'transform 0.2s', cursor: 'default' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ background: 'rgba(16, 185, 129, 0.1)', padding: '12px', borderRadius: '12px', color: '#10b981' }}>
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-            </div>
-            <h3 style={{ fontSize: '1.3rem', color: 'var(--text-dark)' }}>Operational Schedule</h3>
-          </div>
-          <p style={{ color: 'var(--text-muted)', flex: 1 }}>View weekly maintenance patrols, scheduled facility shutdowns, and team deployment rotations.</p>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto' }}>
-            <span className="badge badge-general" style={{ color: '#10b981', background: 'rgba(16,185,129,0.1)' }}>Live Cycles</span>
-            <button onClick={() => navigate('/dashboard/schedule')} className="btn btn-primary" style={{ padding: '0.4rem 1rem' }}>Shift Info</button>
-          </div>
-        </div>
-
+        )}
       </div>
     </div>
   );
