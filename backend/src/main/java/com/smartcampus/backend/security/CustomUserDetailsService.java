@@ -3,13 +3,10 @@ package com.smartcampus.backend.security;
 import com.smartcampus.backend.model.User;
 import com.smartcampus.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
 
 /**
  * Bridges Spring Security's UserDetailsService with our MongoDB UserRepository.
@@ -28,13 +25,6 @@ public class CustomUserDetailsService implements UserDetailsService {
                 .orElseThrow(() -> new UsernameNotFoundException(
                         "User not found with email: " + email));
 
-        // Map our Role enum to a Spring Security GrantedAuthority
-        // Convention: prefix with "ROLE_" so @PreAuthorize("hasRole('ADMIN')") works
-        String password = user.getPassword() != null ? user.getPassword() : "N/A";
-        return new org.springframework.security.core.userdetails.User(
-                user.getEmail(),
-                password,
-                List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole().name()))
-        );
+        return new CustomUserDetails(user);
     }
 }
