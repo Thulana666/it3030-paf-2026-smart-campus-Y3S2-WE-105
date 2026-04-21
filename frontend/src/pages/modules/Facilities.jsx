@@ -378,8 +378,24 @@ const Facilities = () => {
       ];
 
   const filteredResources = resources.filter((resource) => {
+    const isMaintenanceView = view === 'maintenance';
+
+    if (isMaintenanceView) {
+      if (isUser) {
+        if (resource.status !== 'OUT_OF_SERVICE') {
+          return false;
+        }
+      } else if (!['UNDER_MAINTENANCE', 'OUT_OF_SERVICE'].includes(resource.status)) {
+        return false;
+      }
+    }
+
     if (isTechnician) {
-      if (catalogueScope === 'MAINTENANCE' && resource.status !== 'UNDER_MAINTENANCE') {
+      if (
+        !isMaintenanceView &&
+        catalogueScope === 'MAINTENANCE' &&
+        !['UNDER_MAINTENANCE', 'OUT_OF_SERVICE'].includes(resource.status)
+      ) {
         return false;
       }
 
@@ -388,7 +404,7 @@ const Facilities = () => {
       }
     }
 
-    if (isUser && resource.status !== 'ACTIVE') {
+    if (isUser && !isMaintenanceView && resource.status !== 'ACTIVE') {
       return false;
     }
 
@@ -413,11 +429,17 @@ const Facilities = () => {
     return searchableText.includes(searchTerm.trim().toLowerCase());
   });
 
-  const emptyStateTitle = isTechnician && catalogueScope === 'ASSIGNED'
+  const emptyStateTitle = view === 'maintenance'
+    ? 'No Maintenance Resources Found'
+    : isTechnician && catalogueScope === 'ASSIGNED'
     ? 'No Assigned Repair Resources'
     : 'No Resources Found';
 
-  const emptyStateDescription = isTechnician && catalogueScope === 'ASSIGNED'
+  const emptyStateDescription = view === 'maintenance'
+    ? isUser
+      ? 'There are currently no out-of-service resources to display.'
+      : 'No resources are currently marked under maintenance or out of service.'
+    : isTechnician && catalogueScope === 'ASSIGNED'
     ? 'Assigned repair-linked resources will appear here once incident assignment is connected to the catalogue.'
     : isAdmin
       ? 'Create the first resource to get started.'
@@ -2200,17 +2222,41 @@ const Facilities = () => {
   }
 
   // List View
-  if (view === 'list' || (!isTechnician && view !== 'assigned-repairs' && view !== 'create' && view !== 'edit')) {
+  if (
+    view === 'list' ||
+    view === 'maintenance' ||
+    (!isTechnician && view !== 'assigned-repairs' && view !== 'create' && view !== 'edit')
+  ) {
+    const isMaintenanceView = view === 'maintenance';
     return (
       <div className="glass" style={{ padding: '2rem', borderRadius: '15px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
           <div>
-            <h1 style={{ marginBottom: '0.5rem', color: 'var(--primary)' }}>Campus Facilities</h1>
+            <h1 style={{ marginBottom: '0.5rem', color: 'var(--primary)' }}>
+              {isMaintenanceView ? 'Resource Maintenance View' : 'Campus Facilities'}
+            </h1>
             <p style={{ color: 'var(--text-muted)' }}>
-              {roleSummary}
+              {isMaintenanceView
+                ? (isUser
+                  ? 'View resources currently out of service.'
+                  : 'View damaged or maintenance resources and track repair status.')
+                : roleSummary}
             </p>
           </div>
           <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+            {!isUser && (
+              <button
+                onClick={() => setView(isMaintenanceView ? 'list' : 'maintenance')}
+                className="btn btn-outline"
+                style={{
+                  padding: '0.75rem 1.5rem',
+                  borderColor: 'var(--primary-color)',
+                  color: 'var(--primary-color)'
+                }}
+              >
+                {isMaintenanceView ? '🏢 Facilities View' : '🛠️ Maintenance View'}
+              </button>
+            )}
             {isTechnician && (
               <button
                 onClick={() => setView('assigned-repairs')}
@@ -2301,7 +2347,7 @@ const Facilities = () => {
             <select
               value={catalogueScope}
               onChange={(e) => setCatalogueScope(e.target.value)}
-              disabled={scopeOptions.length === 1}
+              disabled={isMaintenanceView || scopeOptions.length === 1}
               style={{
                 width: '100%',
                 padding: '0.8rem 0.9rem',
@@ -2309,7 +2355,7 @@ const Facilities = () => {
                 border: '1px solid rgba(99, 102, 241, 0.15)',
                 background: 'rgba(255,255,255,0.7)',
                 color: 'var(--text-dark)',
-                opacity: scopeOptions.length === 1 ? 0.8 : 1
+                opacity: isMaintenanceView || scopeOptions.length === 1 ? 0.8 : 1
               }}
             >
               {scopeOptions.map((option) => (
