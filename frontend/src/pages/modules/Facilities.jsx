@@ -5,7 +5,8 @@ import * as assignmentService from '../../services/assignmentService';
 
 const Facilities = () => {
   const { user } = useContext(AuthContext);
-  const [view, setView] = useState('list'); // list, create, edit, or assigned-repairs
+  const [view, setView] = useState('list'); // list, create, edit, details, or assigned-repairs
+  const [selectedResource, setSelectedResource] = useState(null);
   const [resources, setResources] = useState([]);
   const [assignments, setAssignments] = useState([]);
   const [assignedResourceMap, setAssignedResourceMap] = useState({});
@@ -380,6 +381,880 @@ const Facilities = () => {
       : isTechnician
         ? 'No maintenance resources matched the current filters.'
         : 'Check back later for available resources.';
+
+  // Helper: format time nicely
+  const formatTime = (timeStr) => {
+    if (!timeStr) return 'N/A';
+    try {
+      const [h, m] = timeStr.split(':');
+      const hour = parseInt(h, 10);
+      const ampm = hour >= 12 ? 'PM' : 'AM';
+      const display = hour % 12 || 12;
+      return `${display}:${m} ${ampm}`;
+    } catch {
+      return timeStr;
+    }
+  };
+
+  // Helper: calculate availability hours
+  const getAvailabilityHours = (start, end) => {
+    if (!start || !end) return null;
+    try {
+      const [sh, sm] = start.split(':').map(Number);
+      const [eh, em] = end.split(':').map(Number);
+      const diff = (eh * 60 + em) - (sh * 60 + sm);
+      const hours = Math.floor(diff / 60);
+      const mins = diff % 60;
+      return mins > 0 ? `${hours}h ${mins}m` : `${hours} hours`;
+    } catch {
+      return null;
+    }
+  };
+
+  // Helper: check if resource is currently available (by time)
+  const isCurrentlyAvailable = (resource) => {
+    if (resource.status !== 'ACTIVE') return false;
+    if (!resource.availabilityStartTime || !resource.availabilityEndTime) return true;
+    const now = new Date();
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    const [sh, sm] = resource.availabilityStartTime.split(':').map(Number);
+    const [eh, em] = resource.availabilityEndTime.split(':').map(Number);
+    const startMin = sh * 60 + sm;
+    const endMin = eh * 60 + em;
+    return currentMinutes >= startMin && currentMinutes <= endMin;
+  };
+
+  // Navigate to details view
+  const handleViewDetails = (resource) => {
+    setSelectedResource(resource);
+    setView('details');
+    setMessage({ type: '', text: '' });
+  };
+
+  // ─── RESOURCE DETAILS VIEW ─────────────────────────────────────────────────
+  if (view === 'details' && selectedResource) {
+    const r = selectedResource;
+    const available = isCurrentlyAvailable(r);
+    const totalHours = getAvailabilityHours(r.availabilityStartTime, r.availabilityEndTime);
+
+    // Calculate timeline percentage for availability bar
+    const getTimePercent = (timeStr) => {
+      if (!timeStr) return 0;
+      const [h, m] = timeStr.split(':').map(Number);
+      return ((h * 60 + m) / (24 * 60)) * 100;
+    };
+    const startPercent = getTimePercent(r.availabilityStartTime);
+    const endPercent = getTimePercent(r.availabilityEndTime);
+    const nowPercent = (() => {
+      const now = new Date();
+      return ((now.getHours() * 60 + now.getMinutes()) / (24 * 60)) * 100;
+    })();
+
+    return (
+      <div style={{ animation: 'slideUp 0.4s ease backwards' }}>
+        {/* Back Navigation */}
+        <div style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <button
+            onClick={() => {
+              setView('list');
+              setSelectedResource(null);
+            }}
+            className="btn btn-outline"
+            style={{
+              padding: '0.6rem 1.2rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              borderColor: 'var(--primary-color)',
+              color: 'var(--primary-color)',
+              fontWeight: '600',
+              borderRadius: '10px'
+            }}
+          >
+            ← Back to Resources
+          </button>
+          <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+            Resource Details
+          </span>
+        </div>
+
+        {/* Hero Image Section */}
+        <div
+          className="glass"
+          style={{
+            borderRadius: '20px',
+            overflow: 'hidden',
+            marginBottom: '1.5rem',
+            position: 'relative'
+          }}
+        >
+          {r.imageUrl ? (
+            <div
+              style={{
+                position: 'relative',
+                width: '100%',
+                height: '360px',
+                cursor: 'pointer',
+                overflow: 'hidden'
+              }}
+              onClick={() => setSelectedImageModal(r)}
+            >
+              <img
+                src={r.imageUrl}
+                alt={r.name}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                  transition: 'transform 0.5s ease'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.03)'}
+                onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+              />
+              {/* Gradient overlay */}
+              <div style={{
+                position: 'absolute',
+                bottom: 0,
+                left: 0,
+                right: 0,
+                height: '50%',
+                background: 'linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 100%)',
+                pointerEvents: 'none'
+              }} />
+              {/* Overlay content */}
+              <div style={{
+                position: 'absolute',
+                bottom: '1.5rem',
+                left: '2rem',
+                right: '2rem',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'flex-end'
+              }}>
+                <div>
+                  <h1 style={{ margin: 0, color: 'white', fontSize: '2rem', textShadow: '0 2px 8px rgba(0,0,0,0.3)' }}>
+                    {r.name}
+                  </h1>
+                  <p style={{ margin: '0.3rem 0 0 0', color: 'rgba(255,255,255,0.85)', fontSize: '1rem' }}>
+                    {r.resourceCode} • {r.type} • {r.category}
+                  </p>
+                </div>
+                <div style={{
+                  background: 'rgba(255,255,255,0.15)',
+                  backdropFilter: 'blur(10px)',
+                  padding: '0.5rem 1rem',
+                  borderRadius: '8px',
+                  color: 'white',
+                  fontSize: '0.85rem',
+                  fontWeight: '500'
+                }}>
+                  🔍 Click to enlarge
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div
+              style={{
+                width: '100%',
+                height: '280px',
+                background: 'linear-gradient(135deg, rgba(79,70,229,0.08) 0%, rgba(139,92,246,0.12) 50%, rgba(59,130,246,0.08) 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexDirection: 'column',
+                position: 'relative'
+              }}
+            >
+              <div style={{ fontSize: '4rem', marginBottom: '1rem', opacity: 0.6 }}>🏢</div>
+              <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '1.1rem', fontWeight: '500' }}>
+                No Image Available
+              </p>
+              <div style={{ position: 'absolute', bottom: '1.5rem', left: '2rem' }}>
+                <h1 style={{ margin: 0, color: 'var(--text-dark)', fontSize: '2rem' }}>{r.name}</h1>
+                <p style={{ margin: '0.3rem 0 0 0', color: 'var(--text-muted)', fontSize: '1rem' }}>
+                  {r.resourceCode} • {r.type} • {r.category}
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Main Content Grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1.5rem' }}>
+          {/* Left Column - Info */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            {/* Status & Availability Card */}
+            <div className="glass" style={{ padding: '2rem', borderRadius: '16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                <h2 style={{ margin: 0, color: 'var(--text-dark)', fontSize: '1.3rem' }}>Status & Availability</h2>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.75rem'
+                }}>
+                  {/* Animated status dot */}
+                  <span style={{
+                    width: '10px',
+                    height: '10px',
+                    borderRadius: '50%',
+                    background: getStatusBadgeColor(r.status),
+                    display: 'inline-block',
+                    boxShadow: r.status === 'ACTIVE' ? `0 0 8px ${getStatusBadgeColor(r.status)}` : 'none',
+                    animation: r.status === 'ACTIVE' ? 'pulse-glow 2s infinite' : 'none'
+                  }} />
+                  <span style={{
+                    background: getStatusBadgeColor(r.status),
+                    color: 'white',
+                    padding: '0.4rem 1rem',
+                    borderRadius: '20px',
+                    fontSize: '0.85rem',
+                    fontWeight: '700',
+                    letterSpacing: '0.5px'
+                  }}>
+                    {r.status}
+                  </span>
+                </div>
+              </div>
+
+              {/* Live Availability Indicator */}
+              <div style={{
+                padding: '1.25rem',
+                borderRadius: '12px',
+                background: available
+                  ? 'linear-gradient(135deg, rgba(16,185,129,0.08) 0%, rgba(52,211,153,0.12) 100%)'
+                  : 'linear-gradient(135deg, rgba(239,68,68,0.08) 0%, rgba(248,113,113,0.12) 100%)',
+                border: `1px solid ${available ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)'}`,
+                marginBottom: '1.5rem'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
+                  <span style={{ fontSize: '1.5rem' }}>{available ? '✅' : '❌'}</span>
+                  <div>
+                    <p style={{
+                      margin: 0,
+                      fontWeight: '700',
+                      fontSize: '1.1rem',
+                      color: available ? '#059669' : '#dc2626'
+                    }}>
+                      {available ? 'Currently Available' : 'Not Available Right Now'}
+                    </p>
+                    <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                      {r.status !== 'ACTIVE'
+                        ? `This resource is ${r.status.replace(/_/g, ' ').toLowerCase()}`
+                        : available
+                          ? 'This resource is within its operating hours'
+                          : 'Outside of scheduled availability hours'
+                      }
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Availability Schedule Timeline */}
+              <div>
+                <p style={{ margin: '0 0 0.75rem 0', color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  Daily Availability Schedule
+                </p>
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: '0.5rem'
+                }}>
+                  <span style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-dark)' }}>
+                    {formatTime(r.availabilityStartTime)}
+                  </span>
+                  {totalHours && (
+                    <span style={{
+                      fontSize: '0.8rem',
+                      background: 'rgba(99,102,241,0.1)',
+                      color: 'var(--primary-color)',
+                      padding: '0.2rem 0.6rem',
+                      borderRadius: '6px',
+                      fontWeight: '600'
+                    }}>
+                      ⏱ {totalHours}
+                    </span>
+                  )}
+                  <span style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-dark)' }}>
+                    {formatTime(r.availabilityEndTime)}
+                  </span>
+                </div>
+                {/* Visual Timeline Bar */}
+                <div style={{
+                  position: 'relative',
+                  height: '12px',
+                  background: 'rgba(99,102,241,0.08)',
+                  borderRadius: '6px',
+                  overflow: 'visible'
+                }}>
+                  <div style={{
+                    position: 'absolute',
+                    left: `${startPercent}%`,
+                    width: `${endPercent - startPercent}%`,
+                    height: '100%',
+                    background: 'linear-gradient(90deg, #4f46e5, #7c3aed, #4f46e5)',
+                    borderRadius: '6px',
+                    transition: 'all 0.3s'
+                  }} />
+                  {/* Current time marker */}
+                  <div style={{
+                    position: 'absolute',
+                    left: `${nowPercent}%`,
+                    top: '-4px',
+                    width: '4px',
+                    height: '20px',
+                    background: '#ef4444',
+                    borderRadius: '2px',
+                    boxShadow: '0 0 6px rgba(239,68,68,0.4)',
+                    transition: 'left 0.3s'
+                  }} />
+                </div>
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  marginTop: '0.4rem',
+                  fontSize: '0.7rem',
+                  color: 'var(--text-muted)'
+                }}>
+                  <span>12 AM</span>
+                  <span>6 AM</span>
+                  <span>12 PM</span>
+                  <span>6 PM</span>
+                  <span>12 AM</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Resource Information Card */}
+            <div className="glass" style={{ padding: '2rem', borderRadius: '16px' }}>
+              <h2 style={{ margin: '0 0 1.5rem 0', color: 'var(--text-dark)', fontSize: '1.3rem' }}>
+                Resource Information
+              </h2>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(3, 1fr)',
+                gap: '1.25rem'
+              }}>
+                {[
+                  { icon: '🏷️', label: 'Resource Code', value: r.resourceCode },
+                  { icon: '📦', label: 'Type', value: r.type },
+                  { icon: '📁', label: 'Category', value: r.category },
+                  { icon: '👥', label: 'Capacity', value: `${r.capacity} persons` },
+                  { icon: '🏢', label: 'Building', value: r.building },
+                  { icon: '🏗️', label: 'Floor', value: r.floor },
+                  { icon: '📍', label: 'Location', value: r.location },
+                  { icon: '📅', label: 'Created', value: r.createdAt ? new Date(r.createdAt).toLocaleDateString() : 'N/A' },
+                  { icon: '🔄', label: 'Last Updated', value: r.updatedAt ? new Date(r.updatedAt).toLocaleDateString() : 'N/A' },
+                ].map((item, idx) => (
+                  <div
+                    key={idx}
+                    style={{
+                      padding: '1rem',
+                      background: 'rgba(99,102,241,0.03)',
+                      borderRadius: '12px',
+                      border: '1px solid rgba(99,102,241,0.06)',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = 'rgba(99,102,241,0.07)';
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(99,102,241,0.08)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'rgba(99,102,241,0.03)';
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = 'none';
+                    }}
+                  >
+                    <div style={{ fontSize: '1.3rem', marginBottom: '0.4rem' }}>{item.icon}</div>
+                    <p style={{
+                      margin: 0,
+                      color: 'var(--text-muted)',
+                      fontSize: '0.75rem',
+                      fontWeight: '600',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px',
+                      marginBottom: '0.25rem'
+                    }}>
+                      {item.label}
+                    </p>
+                    <p style={{
+                      margin: 0,
+                      color: 'var(--text-dark)',
+                      fontWeight: '600',
+                      fontSize: '0.95rem'
+                    }}>
+                      {item.value || 'N/A'}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Description Card */}
+            <div className="glass" style={{ padding: '2rem', borderRadius: '16px' }}>
+              <h2 style={{ margin: '0 0 1rem 0', color: 'var(--text-dark)', fontSize: '1.3rem' }}>
+                Description
+              </h2>
+              {r.description ? (
+                <div style={{
+                  padding: '1.25rem',
+                  background: 'rgba(99,102,241,0.03)',
+                  borderRadius: '12px',
+                  borderLeft: '4px solid var(--primary-color)'
+                }}>
+                  <p style={{
+                    margin: 0,
+                    color: 'var(--text-dark)',
+                    fontSize: '1rem',
+                    lineHeight: '1.7',
+                    whiteSpace: 'pre-wrap'
+                  }}>
+                    {r.description}
+                  </p>
+                </div>
+              ) : (
+                <p style={{ margin: 0, color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                  No description available for this resource.
+                </p>
+              )}
+            </div>
+
+            {/* Technician — Maintenance Details */}
+            {isTechnician && (
+              <div className="glass" style={{ padding: '2rem', borderRadius: '16px' }}>
+                <h2 style={{ margin: '0 0 1.5rem 0', color: 'var(--text-dark)', fontSize: '1.3rem' }}>
+                  🔧 Maintenance Details
+                </h2>
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr',
+                  gap: '1rem'
+                }}>
+                  <div style={{
+                    padding: '1.25rem',
+                    background: r.status === 'UNDER_MAINTENANCE'
+                      ? 'rgba(245,158,11,0.08)'
+                      : r.status === 'OUT_OF_SERVICE'
+                        ? 'rgba(239,68,68,0.08)'
+                        : 'rgba(16,185,129,0.08)',
+                    borderRadius: '12px',
+                    border: `1px solid ${r.status === 'UNDER_MAINTENANCE' ? 'rgba(245,158,11,0.2)' : r.status === 'OUT_OF_SERVICE' ? 'rgba(239,68,68,0.2)' : 'rgba(16,185,129,0.2)'}`,
+                    textAlign: 'center'
+                  }}>
+                    <p style={{ margin: 0, fontSize: '0.75rem', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Condition</p>
+                    <p style={{ margin: '0.5rem 0 0', fontSize: '1.1rem', fontWeight: '700', color: getStatusBadgeColor(r.status) }}>
+                      {r.status === 'UNDER_MAINTENANCE' ? 'Needs Repair' : r.status === 'OUT_OF_SERVICE' ? 'Non-Functional' : 'Operational'}
+                    </p>
+                  </div>
+                  <div style={{
+                    padding: '1.25rem',
+                    background: 'rgba(59,130,246,0.08)',
+                    borderRadius: '12px',
+                    border: '1px solid rgba(59,130,246,0.2)',
+                    textAlign: 'center'
+                  }}>
+                    <p style={{ margin: 0, fontSize: '0.75rem', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Location Check</p>
+                    <p style={{ margin: '0.5rem 0 0', fontSize: '1.1rem', fontWeight: '700', color: '#3b82f6' }}>
+                      {r.building}, {r.floor}
+                    </p>
+                  </div>
+                </div>
+                {r.status === 'UNDER_MAINTENANCE' && (
+                  <div style={{
+                    marginTop: '1rem',
+                    padding: '1rem',
+                    background: 'rgba(245,158,11,0.05)',
+                    borderRadius: '10px',
+                    border: '1px solid rgba(245,158,11,0.15)'
+                  }}>
+                    <p style={{ margin: 0, color: '#d97706', fontWeight: '600', fontSize: '0.9rem' }}>
+                      ⚠️ This resource is currently flagged for maintenance. Check the assigned repairs section for specific tasks.
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Right Column - Quick Actions & Summary */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            {/* Quick Info Summary Card */}
+            <div className="glass" style={{ padding: '2rem', borderRadius: '16px' }}>
+              <h3 style={{ margin: '0 0 1.25rem 0', color: 'var(--text-dark)', fontSize: '1.1rem' }}>
+                Quick Summary
+              </h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                {[
+                  { icon: '🏷️', label: 'Code', value: r.resourceCode },
+                  { icon: '📁', label: 'Category', value: r.category },
+                  { icon: '👥', label: 'Capacity', value: `${r.capacity} persons` },
+                  { icon: '📍', label: 'Location', value: `${r.building}, ${r.floor}` },
+                  { icon: '🕐', label: 'Hours', value: `${formatTime(r.availabilityStartTime)} – ${formatTime(r.availabilityEndTime)}` },
+                ].map((item, idx) => (
+                  <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <span style={{
+                      width: '36px',
+                      height: '36px',
+                      borderRadius: '8px',
+                      background: 'rgba(99,102,241,0.08)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '1rem',
+                      flexShrink: 0
+                    }}>
+                      {item.icon}
+                    </span>
+                    <div style={{ flex: 1 }}>
+                      <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: '600' }}>{item.label}</p>
+                      <p style={{ margin: '0.15rem 0 0', fontSize: '0.9rem', color: 'var(--text-dark)', fontWeight: '500' }}>{item.value}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="glass" style={{ padding: '1.5rem', borderRadius: '16px' }}>
+              <h3 style={{ margin: '0 0 1rem 0', color: 'var(--text-dark)', fontSize: '1.1rem' }}>
+                Actions
+              </h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {/* USER: Book Resource / Check Availability */}
+                {isUser && r.status === 'ACTIVE' && (
+                  <button
+                    className="btn btn-primary"
+                    style={{
+                      width: '100%',
+                      padding: '0.85rem',
+                      fontSize: '0.95rem',
+                      borderRadius: '10px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.5rem'
+                    }}
+                    onClick={() => {
+                      // Navigate to booking module (placeholder)
+                      setMessage({ type: 'success', text: 'Redirecting to booking system...' });
+                    }}
+                  >
+                    📅 Book This Resource
+                  </button>
+                )}
+
+                {/* ADMIN: Edit, Change Status, Delete */}
+                {isAdmin && (
+                  <>
+                    <button
+                      onClick={() => handleEdit(r)}
+                      style={{
+                        width: '100%',
+                        padding: '0.85rem',
+                        background: 'rgba(99,102,241,0.1)',
+                        border: '1px solid rgba(99,102,241,0.3)',
+                        color: 'var(--primary-color)',
+                        borderRadius: '10px',
+                        cursor: 'pointer',
+                        fontWeight: '600',
+                        fontSize: '0.95rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '0.5rem',
+                        transition: 'all 0.2s'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(99,102,241,0.18)'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(99,102,241,0.1)'}
+                    >
+                      ✏️ Edit Resource
+                    </button>
+                    <button
+                      onClick={() => setStatusChangeResource(r)}
+                      style={{
+                        width: '100%',
+                        padding: '0.85rem',
+                        background: 'rgba(245,158,11,0.1)',
+                        border: '1px solid rgba(245,158,11,0.3)',
+                        color: '#f59e0b',
+                        borderRadius: '10px',
+                        cursor: 'pointer',
+                        fontWeight: '600',
+                        fontSize: '0.95rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '0.5rem',
+                        transition: 'all 0.2s'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(245,158,11,0.18)'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(245,158,11,0.1)'}
+                    >
+                      ⚙️ Change Status
+                    </button>
+                    <button
+                      onClick={() => handleDelete(r.id, r.name)}
+                      style={{
+                        width: '100%',
+                        padding: '0.85rem',
+                        background: 'rgba(239,68,68,0.1)',
+                        border: '1px solid rgba(239,68,68,0.3)',
+                        color: '#ef4444',
+                        borderRadius: '10px',
+                        cursor: 'pointer',
+                        fontWeight: '600',
+                        fontSize: '0.95rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '0.5rem',
+                        transition: 'all 0.2s'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(239,68,68,0.18)'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(239,68,68,0.1)'}
+                    >
+                      🗑️ Delete Resource
+                    </button>
+                  </>
+                )}
+
+                {/* TECHNICIAN: Request status */}
+                {isTechnician && r.status === 'UNDER_MAINTENANCE' && (
+                  <button
+                    onClick={() => handleChangeStatus(r.id, 'ACTIVE')}
+                    style={{
+                      width: '100%',
+                      padding: '0.85rem',
+                      background: 'linear-gradient(135deg, #10b981, #059669)',
+                      border: 'none',
+                      color: 'white',
+                      borderRadius: '10px',
+                      cursor: 'pointer',
+                      fontWeight: '600',
+                      fontSize: '0.95rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.5rem',
+                      transition: 'all 0.2s',
+                      boxShadow: '0 4px 12px rgba(16,185,129,0.3)'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-1px)'}
+                    onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                  >
+                    ✅ Request ACTIVE Status
+                  </button>
+                )}
+
+                {/* Back button for all */}
+                <button
+                  onClick={() => {
+                    setView('list');
+                    setSelectedResource(null);
+                  }}
+                  className="btn btn-outline"
+                  style={{
+                    width: '100%',
+                    padding: '0.85rem',
+                    borderRadius: '10px',
+                    fontSize: '0.95rem'
+                  }}
+                >
+                  ← Back to List
+                </button>
+              </div>
+            </div>
+
+            {/* ADMIN: Usage Statistics (Optional) */}
+            {isAdmin && (
+              <div className="glass" style={{ padding: '2rem', borderRadius: '16px' }}>
+                <h3 style={{ margin: '0 0 1.25rem 0', color: 'var(--text-dark)', fontSize: '1.1rem' }}>
+                  📊 Usage Overview
+                </h3>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  <div style={{
+                    padding: '1rem',
+                    background: 'rgba(16,185,129,0.08)',
+                    borderRadius: '12px',
+                    textAlign: 'center'
+                  }}>
+                    <p style={{ margin: 0, fontSize: '1.5rem', fontWeight: '700', color: '#10b981' }}>—</p>
+                    <p style={{ margin: '0.25rem 0 0', fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: '600' }}>Total Bookings</p>
+                  </div>
+                  <div style={{
+                    padding: '1rem',
+                    background: 'rgba(99,102,241,0.08)',
+                    borderRadius: '12px',
+                    textAlign: 'center'
+                  }}>
+                    <p style={{ margin: 0, fontSize: '1.5rem', fontWeight: '700', color: 'var(--primary-color)' }}>—</p>
+                    <p style={{ margin: '0.25rem 0 0', fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: '600' }}>This Month</p>
+                  </div>
+                </div>
+                <p style={{ margin: '1rem 0 0', fontSize: '0.8rem', color: 'var(--text-muted)', fontStyle: 'italic', textAlign: 'center' }}>
+                  Usage statistics will be available once booking data is connected.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Inject pulse-glow animation */}
+        <style>{`
+          @keyframes pulse-glow {
+            0%, 100% { opacity: 1; box-shadow: 0 0 8px currentColor; }
+            50% { opacity: 0.5; box-shadow: 0 0 16px currentColor; }
+          }
+        `}</style>
+
+        {/* Image Modal (reused from list view) */}
+        {selectedImageModal && (
+          <div
+            onClick={() => setSelectedImageModal(null)}
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(0, 0, 0, 0.85)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 1000,
+              padding: '1rem'
+            }}
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                background: 'white',
+                borderRadius: '15px',
+                overflow: 'hidden',
+                maxWidth: '90vw',
+                maxHeight: '90vh',
+                boxShadow: '0 20px 60px rgba(0, 0, 0, 0.4)',
+                display: 'flex',
+                flexDirection: 'column'
+              }}
+            >
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '1rem 1.5rem',
+                borderBottom: '1px solid rgba(99,102,241,0.1)',
+                background: 'rgba(99,102,241,0.03)'
+              }}>
+                <h3 style={{ margin: 0, color: 'var(--text-dark)' }}>{selectedImageModal.name}</h3>
+                <button
+                  onClick={() => setSelectedImageModal(null)}
+                  style={{
+                    background: 'rgba(239,68,68,0.1)',
+                    border: 'none',
+                    color: '#ef4444',
+                    fontSize: '1.5rem',
+                    cursor: 'pointer',
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '2rem',
+                background: '#f8f9fa',
+                maxHeight: 'calc(90vh - 120px)',
+                overflow: 'auto'
+              }}>
+                <img
+                  src={selectedImageModal.imageUrl}
+                  alt={selectedImageModal.name}
+                  style={{ maxWidth: '100%', maxHeight: '100%', borderRadius: '8px', objectFit: 'contain' }}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Status Change Modal */}
+        {statusChangeResource && isAdmin && (
+          <div
+            onClick={() => setStatusChangeResource(null)}
+            style={{
+              position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+              background: 'rgba(0,0,0,0.6)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              zIndex: 1000, padding: '1rem'
+            }}
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                background: 'white', borderRadius: '15px', maxWidth: '450px', width: '100%',
+                boxShadow: '0 20px 60px rgba(0,0,0,0.3)', overflow: 'hidden'
+              }}
+            >
+              <div style={{ padding: '1.5rem', borderBottom: '1px solid rgba(99,102,241,0.1)', background: 'rgba(99,102,241,0.05)' }}>
+                <h2 style={{ margin: 0, color: 'var(--text-dark)' }}>Change Status</h2>
+                <p style={{ margin: '0.5rem 0 0', color: 'var(--text-muted)' }}>{statusChangeResource.name}</p>
+              </div>
+              <div style={{ padding: '2rem' }}>
+                <p style={{ margin: '0 0 1.5rem', color: 'var(--text-dark)', fontWeight: '500' }}>
+                  Current: <span style={{ color: getStatusBadgeColor(statusChangeResource.status), fontWeight: '600' }}>{statusChangeResource.status}</span>
+                </p>
+                <div style={{ display: 'grid', gap: '0.75rem' }}>
+                  {['ACTIVE', 'UNDER_MAINTENANCE', 'OUT_OF_SERVICE'].map((status) => (
+                    <button
+                      key={status}
+                      onClick={() => {
+                        handleChangeStatus(statusChangeResource.id, status);
+                        // Refresh the selected resource
+                        setSelectedResource(prev => prev ? { ...prev, status } : prev);
+                      }}
+                      disabled={loading}
+                      style={{
+                        padding: '1rem', borderRadius: '8px', cursor: 'pointer',
+                        fontWeight: '600', fontSize: '0.95rem', color: 'var(--text-dark)',
+                        background: statusChangeResource.status === status ? 'rgba(99,102,241,0.15)' : 'rgba(99,102,241,0.05)',
+                        border: `2px solid ${statusChangeResource.status === status ? 'rgba(99,102,241,0.5)' : 'rgba(99,102,241,0.2)'}`,
+                        display: 'flex', alignItems: 'center', gap: '0.75rem',
+                        opacity: loading ? 0.6 : 1, transition: 'all 0.2s'
+                      }}
+                    >
+                      <span style={{ fontSize: '1.2rem' }}>
+                        {status === 'ACTIVE' && '✅'}{status === 'UNDER_MAINTENANCE' && '🔧'}{status === 'OUT_OF_SERVICE' && '⛔'}
+                      </span>
+                      <div style={{ textAlign: 'left' }}>
+                        <div style={{ fontWeight: '600' }}>{status}</div>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
+                          {status === 'ACTIVE' && 'Resource is operational'}
+                          {status === 'UNDER_MAINTENANCE' && 'Under maintenance'}
+                          {status === 'OUT_OF_SERVICE' && 'Out of service'}
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div style={{ padding: '1rem', borderTop: '1px solid rgba(99,102,241,0.1)', display: 'flex' }}>
+                <button onClick={() => setStatusChangeResource(null)} className="btn btn-outline" style={{ flex: 1 }}>Cancel</button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   // Create/Edit View
   if ((view === 'create' || view === 'edit') && isAdmin) {
@@ -1524,6 +2399,45 @@ const Facilities = () => {
                     {resource.description}
                   </p>
                 )}
+
+                {/* View Details Button — all roles */}
+                <div style={{
+                  marginTop: '1rem',
+                  paddingTop: '0.75rem',
+                  borderTop: '1px solid rgba(99, 102, 241, 0.08)'
+                }}>
+                  <button
+                    onClick={() => handleViewDetails(resource)}
+                    style={{
+                      width: '100%',
+                      padding: '0.7rem',
+                      background: 'linear-gradient(135deg, rgba(79,70,229,0.08) 0%, rgba(139,92,246,0.12) 100%)',
+                      border: '1px solid rgba(99,102,241,0.15)',
+                      color: 'var(--primary-color)',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontWeight: '600',
+                      fontSize: '0.9rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.5rem',
+                      transition: 'all 0.25s'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = 'linear-gradient(135deg, rgba(79,70,229,0.15) 0%, rgba(139,92,246,0.2) 100%)';
+                      e.currentTarget.style.transform = 'translateY(-1px)';
+                      e.currentTarget.style.boxShadow = '0 4px 15px rgba(99,102,241,0.15)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'linear-gradient(135deg, rgba(79,70,229,0.08) 0%, rgba(139,92,246,0.12) 100%)';
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = 'none';
+                    }}
+                  >
+                    📋 View Details
+                  </button>
+                </div>
 
                 {/* Admin Actions - Edit, Status Change & Delete Buttons */}
                 {isAdmin && (
