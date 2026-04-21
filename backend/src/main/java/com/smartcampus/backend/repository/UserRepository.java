@@ -18,4 +18,7 @@ public interface UserRepository extends MongoRepository<User, String> {
 
     /** Used during registration to prevent duplicate accounts. */
     boolean existsByEmail(String email);
+
+    /** Used to find users by role (e.g. for notifications) */
+    java.util.List<User> findByRole(com.smartcampus.backend.model.Role role);
 }
