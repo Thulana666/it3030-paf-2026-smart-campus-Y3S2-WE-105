@@ -124,6 +124,13 @@ public class ResourceService {
         return resourceRepository.save(resource);
     }
 
+    // Update resource image URL (used by ResourceImageService)
+    public Resource updateResourceImageUrl(String id, String imageUrl) {
+        Resource resource = getResourceById(id);
+        resource.setImageUrl(imageUrl);
+        return resourceRepository.save(resource);
+    }
+
     // Soft delete (set status to INACTIVE)
     public Resource deleteResource(String id) {
         Resource resource = getResourceById(id);

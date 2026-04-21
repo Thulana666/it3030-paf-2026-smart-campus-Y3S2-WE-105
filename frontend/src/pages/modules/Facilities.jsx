@@ -2,6 +2,8 @@ import React, { useState, useContext, useEffect } from 'react';
 import { AuthContext } from '../../context/AuthContext';
 import * as resourceService from '../../services/resourceService';
 import * as assignmentService from '../../services/assignmentService';
+import ImageUploadModal from '../../components/ImageUploadModal';
+import ImageGallery from '../../components/ImageGallery';
 
 const Facilities = () => {
   const { user } = useContext(AuthContext);
@@ -14,7 +16,8 @@ const Facilities = () => {
   const [message, setMessage] = useState({ type: '', text: '' });
   const [selectedImageModal, setSelectedImageModal] = useState(null);
   const [editingResourceId, setEditingResourceId] = useState(null);
-  
+  const [showImageUploadModal, setShowImageUploadModal] = useState(false);
+
   const isAdmin = user?.role === 'ADMIN';
   const isTechnician = user?.role === 'TECHNICIAN';
   const isUser = user?.role === 'USER';
@@ -163,7 +166,7 @@ const Facilities = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!isAdmin) {
       setMessage({ type: 'error', text: 'Only admins can manage resources' });
       return;
@@ -322,17 +325,17 @@ const Facilities = () => {
 
   const scopeOptions = isTechnician
     ? [
-        { value: 'MAINTENANCE', label: 'Under Maintenance' },
-        { value: 'ASSIGNED', label: 'Assigned Repairs' }
-      ]
+      { value: 'MAINTENANCE', label: 'Under Maintenance' },
+      { value: 'ASSIGNED', label: 'Assigned Repairs' }
+    ]
     : isAdmin
       ? [
-          { value: 'ALL', label: 'All Resources' },
-          { value: 'MANAGEMENT', label: 'Management View' }
-        ]
+        { value: 'ALL', label: 'All Resources' },
+        { value: 'MANAGEMENT', label: 'Management View' }
+      ]
       : [
-          { value: 'ALL', label: 'Active Catalogue' }
-        ];
+        { value: 'ALL', label: 'Active Catalogue' }
+      ];
 
   const filteredResources = resources.filter((resource) => {
     if (isTechnician) {
@@ -1100,6 +1103,64 @@ const Facilities = () => {
           </div>
         </div>
 
+        {/* Image Management Section - Full width below main content */}
+        <div style={{ marginTop: '2rem' }}>
+          {isAdmin && (
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '1.5rem'
+            }}>
+              <h2 style={{ margin: 0, color: 'var(--text-dark)', fontSize: '1.3rem' }}>
+                📸 Resource Images
+              </h2>
+              <button
+                onClick={() => setShowImageUploadModal(true)}
+                style={{
+                  padding: '0.65rem 1.25rem',
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  border: 'none',
+                  color: 'white',
+                  borderRadius: '8px',
+                  fontWeight: '600',
+                  fontSize: '0.9rem',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = '0 6px 16px rgba(102, 126, 234, 0.4)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.3)';
+                }}
+              >
+                + Upload Image
+              </button>
+            </div>
+          )}
+          <ImageGallery
+            resourceId={r.id}
+            isAdmin={isAdmin}
+            onImageUpdate={() => loadResources()}
+            onImageDelete={() => loadResources()}
+          />
+        </div>
+
+        {/* Image Upload Modal */}
+        <ImageUploadModal
+          resourceId={r.id}
+          isOpen={showImageUploadModal}
+          onClose={() => setShowImageUploadModal(false)}
+          onUploadSuccess={() => {
+            setMessage({ type: 'success', text: 'Image uploaded successfully!' });
+            loadResources();
+          }}
+        />
+
         {/* Inject pulse-glow animation */}
         <style>{`
           @keyframes pulse-glow {
@@ -1264,7 +1325,7 @@ const Facilities = () => {
           <h1 style={{ color: 'var(--primary)' }}>
             {view === 'edit' ? 'Edit Resource' : 'Create New Resource'}
           </h1>
-          <button 
+          <button
             onClick={() => {
               setView('list');
               setEditingResourceId(null);
@@ -1582,23 +1643,23 @@ const Facilities = () => {
               cursor: 'pointer',
               transition: 'all 0.3s'
             }}
-            onDragOver={(e) => {
-              e.preventDefault();
-              e.currentTarget.style.borderColor = 'var(--primary-color)';
-              e.currentTarget.style.background = 'rgba(99, 102, 241, 0.1)';
-            }}
-            onDragLeave={(e) => {
-              e.currentTarget.style.borderColor = 'rgba(99, 102, 241, 0.3)';
-              e.currentTarget.style.background = 'rgba(99, 102, 241, 0.05)';
-            }}
-            onDrop={(e) => {
-              e.preventDefault();
-              e.currentTarget.style.borderColor = 'rgba(99, 102, 241, 0.3)';
-              e.currentTarget.style.background = 'rgba(99, 102, 241, 0.05)';
-              if (e.dataTransfer.files[0]) {
-                handleImageChange({ target: { files: e.dataTransfer.files } });
-              }
-            }}
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.currentTarget.style.borderColor = 'var(--primary-color)';
+                e.currentTarget.style.background = 'rgba(99, 102, 241, 0.1)';
+              }}
+              onDragLeave={(e) => {
+                e.currentTarget.style.borderColor = 'rgba(99, 102, 241, 0.3)';
+                e.currentTarget.style.background = 'rgba(99, 102, 241, 0.05)';
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                e.currentTarget.style.borderColor = 'rgba(99, 102, 241, 0.3)';
+                e.currentTarget.style.background = 'rgba(99, 102, 241, 0.05)';
+                if (e.dataTransfer.files[0]) {
+                  handleImageChange({ target: { files: e.dataTransfer.files } });
+                }
+              }}
             >
               <input
                 type="file"
@@ -1628,9 +1689,9 @@ const Facilities = () => {
                 border: '1px solid rgba(99, 102, 241, 0.2)',
                 background: 'rgba(255,255,255,0.5)'
               }}>
-                <img 
-                  src={imagePreview} 
-                  alt="Preview" 
+                <img
+                  src={imagePreview}
+                  alt="Preview"
                   style={{
                     width: '100%',
                     maxHeight: '300px',
@@ -1745,10 +1806,10 @@ const Facilities = () => {
               Track resources assigned to you for repair and maintenance.
             </p>
           </div>
-          <button 
+          <button
             onClick={() => setView('list')}
             className="btn btn-outline"
-            style={{ 
+            style={{
               padding: '0.75rem 1.5rem',
               borderColor: 'var(--primary-color)',
               color: 'var(--primary-color)'
@@ -1763,8 +1824,8 @@ const Facilities = () => {
             padding: '1rem',
             marginBottom: '1.5rem',
             borderRadius: '8px',
-            background: message.type === 'success' 
-              ? 'rgba(34, 197, 94, 0.1)' 
+            background: message.type === 'success'
+              ? 'rgba(34, 197, 94, 0.1)'
               : 'rgba(239, 68, 68, 0.1)',
             border: `1px solid ${message.type === 'success' ? '#22c55e' : '#ef4444'}`,
             color: message.type === 'success' ? '#22c55e' : '#ef4444'
@@ -1793,7 +1854,7 @@ const Facilities = () => {
             {assignments.map(assignment => {
               const resource = assignedResourceMap[assignment.id];
               const getPriorityColor = (priority) => {
-                switch(priority) {
+                switch (priority) {
                   case 'CRITICAL': return '#dc2626';
                   case 'HIGH': return '#ea580c';
                   case 'MEDIUM': return '#eab308';
@@ -1803,7 +1864,7 @@ const Facilities = () => {
               };
 
               const getAssignmentStatusColor = (status) => {
-                switch(status) {
+                switch (status) {
                   case 'ASSIGNED': return '#e0e7ff';
                   case 'IN_PROGRESS': return '#fef3c7';
                   case 'COMPLETED': return '#d1fae5';
@@ -1813,8 +1874,8 @@ const Facilities = () => {
               };
 
               return (
-                <div 
-                  key={assignment.id} 
+                <div
+                  key={assignment.id}
                   className="card"
                   style={{
                     background: getAssignmentStatusColor(assignment.status),
@@ -1848,8 +1909,8 @@ const Facilities = () => {
                       onMouseEnter={(e) => e.currentTarget.style.opacity = '0.9'}
                       onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
                     >
-                      <img 
-                        src={resource.imageUrl} 
+                      <img
+                        src={resource.imageUrl}
                         alt={resource.name}
                         style={{
                           width: '100%',
@@ -1886,7 +1947,7 @@ const Facilities = () => {
                         <h3 style={{ margin: 0, color: 'var(--text-dark)', fontSize: '1.1rem' }}>
                           {resource?.name || 'Resource Not Found'}
                         </h3>
-                        <span 
+                        <span
                           style={{
                             background: getPriorityColor(assignment.priority),
                             color: 'white',
@@ -1906,7 +1967,7 @@ const Facilities = () => {
                     </div>
 
                     {/* Description */}
-                    <div style={{ 
+                    <div style={{
                       background: 'rgba(255,255,255,0.5)',
                       padding: '0.75rem',
                       borderRadius: '8px',
@@ -1970,9 +2031,9 @@ const Facilities = () => {
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                       <button
                         onClick={() => {
-                          const newStatus = assignment.status === 'ASSIGNED' ? 'IN_PROGRESS' : 
-                                           assignment.status === 'IN_PROGRESS' ? 'COMPLETED' : 
-                                           assignment.status;
+                          const newStatus = assignment.status === 'ASSIGNED' ? 'IN_PROGRESS' :
+                            assignment.status === 'IN_PROGRESS' ? 'COMPLETED' :
+                              assignment.status;
                           if (newStatus !== assignment.status) {
                             handleUpdateAssignmentStatus(assignment.id, newStatus);
                           }
@@ -1992,9 +2053,9 @@ const Facilities = () => {
                         onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
                         disabled={assignment.status === 'COMPLETED' || assignment.status === 'CANCELLED'}
                       >
-                        {assignment.status === 'ASSIGNED' ? 'Start Work' : 
-                         assignment.status === 'IN_PROGRESS' ? 'Mark Complete' :
-                         'Completed'}
+                        {assignment.status === 'ASSIGNED' ? 'Start Work' :
+                          assignment.status === 'IN_PROGRESS' ? 'Mark Complete' :
+                            'Completed'}
                       </button>
                       <button
                         onClick={() => {
@@ -2059,8 +2120,8 @@ const Facilities = () => {
               }}
             >
               <div style={{ flex: 1, overflow: 'auto', background: '#000' }}>
-                <img 
-                  src={selectedImageModal.imageUrl} 
+                <img
+                  src={selectedImageModal.imageUrl}
                   alt={selectedImageModal.name}
                   style={{
                     width: '100%',
@@ -2108,10 +2169,10 @@ const Facilities = () => {
           </div>
           <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
             {isTechnician && (
-              <button 
+              <button
                 onClick={() => setView('assigned-repairs')}
                 className="btn btn-outline"
-                style={{ 
+                style={{
                   padding: '0.75rem 1.5rem',
                   borderColor: 'var(--primary-color)',
                   color: 'var(--primary-color)'
@@ -2121,7 +2182,7 @@ const Facilities = () => {
               </button>
             )}
             {isAdmin && (
-              <button 
+              <button
                 onClick={() => setView('create')}
                 className="btn btn-primary"
                 style={{ padding: '0.75rem 1.5rem' }}
@@ -2132,46 +2193,27 @@ const Facilities = () => {
           </div>
         </div>
 
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-          gap: '1rem',
-          marginBottom: '1.5rem',
-          padding: '1rem',
-          borderRadius: '12px',
-          background: 'rgba(255, 255, 255, 0.35)',
-          border: '1px solid rgba(99, 102, 241, 0.08)'
-        }}
-      >
-        <div>
-          <label style={{ display: 'block', marginBottom: '0.4rem', color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: '600' }}>
-            Search Resources
-          </label>
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Name, code, category, building..."
-            style={{
-              width: '100%',
-              padding: '0.8rem 0.9rem',
-              borderRadius: '8px',
-              border: '1px solid rgba(99, 102, 241, 0.15)',
-              background: 'rgba(255,255,255,0.7)',
-              color: 'var(--text-dark)'
-            }}
-          />
-        </div>
-
-        {isAdmin && (
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+            gap: '1rem',
+            marginBottom: '1.5rem',
+            padding: '1rem',
+            borderRadius: '12px',
+            background: 'rgba(255, 255, 255, 0.35)',
+            border: '1px solid rgba(99, 102, 241, 0.08)'
+          }}
+        >
           <div>
             <label style={{ display: 'block', marginBottom: '0.4rem', color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: '600' }}>
-              Status Filter
+              Search Resources
             </label>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Name, code, category, building..."
               style={{
                 width: '100%',
                 padding: '0.8rem 0.9rem',
@@ -2180,97 +2222,116 @@ const Facilities = () => {
                 background: 'rgba(255,255,255,0.7)',
                 color: 'var(--text-dark)'
               }}
+            />
+          </div>
+
+          {isAdmin && (
+            <div>
+              <label style={{ display: 'block', marginBottom: '0.4rem', color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: '600' }}>
+                Status Filter
+              </label>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '0.8rem 0.9rem',
+                  borderRadius: '8px',
+                  border: '1px solid rgba(99, 102, 241, 0.15)',
+                  background: 'rgba(255,255,255,0.7)',
+                  color: 'var(--text-dark)'
+                }}
+              >
+                <option value="ALL">All Statuses</option>
+                <option value="ACTIVE">ACTIVE</option>
+                <option value="UNDER_MAINTENANCE">UNDER_MAINTENANCE</option>
+                <option value="OUT_OF_SERVICE">OUT_OF_SERVICE</option>
+                <option value="INACTIVE">INACTIVE</option>
+              </select>
+            </div>
+          )}
+
+          <div>
+            <label style={{ display: 'block', marginBottom: '0.4rem', color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: '600' }}>
+              View Scope
+            </label>
+            <select
+              value={catalogueScope}
+              onChange={(e) => setCatalogueScope(e.target.value)}
+              disabled={scopeOptions.length === 1}
+              style={{
+                width: '100%',
+                padding: '0.8rem 0.9rem',
+                borderRadius: '8px',
+                border: '1px solid rgba(99, 102, 241, 0.15)',
+                background: 'rgba(255,255,255,0.7)',
+                color: 'var(--text-dark)',
+                opacity: scopeOptions.length === 1 ? 0.8 : 1
+              }}
             >
-              <option value="ALL">All Statuses</option>
-              <option value="ACTIVE">ACTIVE</option>
-              <option value="UNDER_MAINTENANCE">UNDER_MAINTENANCE</option>
-              <option value="OUT_OF_SERVICE">OUT_OF_SERVICE</option>
-              <option value="INACTIVE">INACTIVE</option>
+              {scopeOptions.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
             </select>
+          </div>
+        </div>
+
+        {loading && (
+          <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+            Loading resources...
           </div>
         )}
 
-        <div>
-          <label style={{ display: 'block', marginBottom: '0.4rem', color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: '600' }}>
-            View Scope
-          </label>
-          <select
-            value={catalogueScope}
-            onChange={(e) => setCatalogueScope(e.target.value)}
-            disabled={scopeOptions.length === 1}
-            style={{
-              width: '100%',
-              padding: '0.8rem 0.9rem',
-              borderRadius: '8px',
-              border: '1px solid rgba(99, 102, 241, 0.15)',
-              background: 'rgba(255,255,255,0.7)',
-              color: 'var(--text-dark)',
-              opacity: scopeOptions.length === 1 ? 0.8 : 1
-            }}
-          >
-            {scopeOptions.map((option) => (
-              <option key={option.value} value={option.value}>{option.label}</option>
-            ))}
-          </select>
-        </div>
-      </div>
+        {!loading && filteredResources.length === 0 && (
+          <div className="empty-state" style={{ background: 'rgba(255,255,255,0.4)', borderRadius: '15px' }}>
+            <h3 style={{ color: 'var(--text-dark)' }}>{emptyStateTitle}</h3>
+            <p style={{ marginTop: '0.5rem' }}>
+              {emptyStateDescription}
+            </p>
+          </div>
+        )}
 
-      {loading && (
-        <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
-          Loading resources...
-        </div>
-      )}
-
-      {!loading && filteredResources.length === 0 && (
-        <div className="empty-state" style={{ background: 'rgba(255,255,255,0.4)', borderRadius: '15px' }}>
-          <h3 style={{ color: 'var(--text-dark)' }}>{emptyStateTitle}</h3>
-          <p style={{ marginTop: '0.5rem' }}>
-            {emptyStateDescription}
-          </p>
-        </div>
-      )}
-
-      {!loading && filteredResources.length > 0 && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '1.5rem' }}>
-          {filteredResources.map(resource => (
-            <div 
-              key={resource.id} 
-              className="card" 
-              style={{
-                background: getStatusColor(resource.status),
-                borderRadius: '12px',
-                overflow: 'hidden',
-                border: '1px solid rgba(99, 102, 241, 0.1)',
-                transition: 'transform 0.2s'
-              }}
-            >
-              {resource.imageUrl ? (
-                <div
-                  onClick={() => setSelectedImageModal(resource)}
-                  style={{
-                    position: 'relative',
-                    width: '100%',
-                    height: '200px',
-                    overflow: 'hidden',
-                    cursor: 'pointer',
-                    background: 'rgba(0,0,0,0.05)',
-                    borderBottom: '1px solid rgba(99, 102, 241, 0.1)',
-                    transition: 'transform 0.3s ease'
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
-                  onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                >
-                  <img 
-                    src={resource.imageUrl} 
-                    alt={resource.name}
+        {!loading && filteredResources.length > 0 && (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '1.5rem' }}>
+            {filteredResources.map(resource => (
+              <div
+                key={resource.id}
+                className="card"
+                style={{
+                  background: getStatusColor(resource.status),
+                  borderRadius: '12px',
+                  overflow: 'hidden',
+                  border: '1px solid rgba(99, 102, 241, 0.1)',
+                  transition: 'transform 0.2s'
+                }}
+              >
+                {resource.imageUrl ? (
+                  <div
+                    onClick={() => setSelectedImageModal(resource)}
                     style={{
+                      position: 'relative',
                       width: '100%',
-                      height: '100%',
-                      objectFit: 'cover'
+                      height: '200px',
+                      overflow: 'hidden',
+                      cursor: 'pointer',
+                      background: 'rgba(0,0,0,0.05)',
+                      borderBottom: '1px solid rgba(99, 102, 241, 0.1)',
+                      transition: 'transform 0.3s ease'
                     }}
-                    onError={(e) => {
-                      e.target.style.display = 'none';
-                      e.target.parentElement.innerHTML = `
+                    onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                    onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                  >
+                    <img
+                      src={resource.imageUrl}
+                      alt={resource.name}
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover'
+                      }}
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        e.target.parentElement.innerHTML = `
                         <div style="display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);">
                           <div style="text-align: center;">
                             <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🏢</div>
@@ -2278,471 +2339,308 @@ const Facilities = () => {
                           </div>
                         </div>
                       `;
-                    }}
-                  />
-                  <div style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    background: 'rgba(0,0,0,0)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    opacity: 0,
-                    transition: 'opacity 0.3s ease'
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
-                  onMouseLeave={(e) => e.currentTarget.style.opacity = '0'}
-                  >
+                      }}
+                    />
                     <div style={{
-                      background: 'rgba(99, 102, 241, 0.9)',
-                      color: 'white',
-                      padding: '0.5rem 1rem',
-                      borderRadius: '6px',
-                      fontSize: '0.9rem',
-                      fontWeight: '600'
-                    }}>
-                      🔍 View Full Image
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div
-                  style={{
-                    position: 'relative',
-                    width: '100%',
-                    height: '200px',
-                    background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%)',
-                    borderBottom: '1px solid rgba(99, 102, 241, 0.1)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexDirection: 'column',
-                    cursor: 'default'
-                  }}
-                >
-                  <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>🏢</div>
-                  <p style={{ margin: 0, color: 'rgba(99, 102, 241, 0.6)', fontSize: '0.9rem', fontWeight: '500' }}>
-                    No Image Added
-                  </p>
-                </div>
-              )}
-              
-              <div style={{ padding: '1.5rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '0.75rem' }}>
-                  <div>
-                    <h3 style={{ margin: 0, color: 'var(--text-dark)', fontSize: '1.2rem' }}>
-                      {resource.name}
-                    </h3>
-                    <p style={{ margin: '0.25rem 0 0 0', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-                      Code: {resource.resourceCode}
-                    </p>
-                  </div>
-                  <span 
-                    className="badge"
-                    style={{
-                      background: getStatusBadgeColor(resource.status),
-                      color: 'white',
-                      padding: '0.4rem 0.8rem',
-                      borderRadius: '20px',
-                      fontSize: '0.8rem',
-                      fontWeight: '600',
-                      whiteSpace: 'nowrap'
-                    }}
-                  >
-                    {resource.status}
-                  </span>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '1rem', fontSize: '0.9rem' }}>
-                  <div>
-                    <p style={{ margin: 0, color: 'var(--text-muted)' }}>Type</p>
-                    <p style={{ margin: '0.25rem 0 0 0', color: 'var(--text-dark)', fontWeight: '500' }}>
-                      {resource.type}
-                    </p>
-                  </div>
-                  <div>
-                    <p style={{ margin: 0, color: 'var(--text-muted)' }}>Category</p>
-                    <p style={{ margin: '0.25rem 0 0 0', color: 'var(--text-dark)', fontWeight: '500' }}>
-                      {resource.category}
-                    </p>
-                  </div>
-                  <div>
-                    <p style={{ margin: 0, color: 'var(--text-muted)' }}>Capacity</p>
-                    <p style={{ margin: '0.25rem 0 0 0', color: 'var(--text-dark)', fontWeight: '500' }}>
-                      {resource.capacity} persons
-                    </p>
-                  </div>
-                  <div>
-                    <p style={{ margin: 0, color: 'var(--text-muted)' }}>Hours</p>
-                    <p style={{ margin: '0.25rem 0 0 0', color: 'var(--text-dark)', fontWeight: '500' }}>
-                      {resource.availabilityStartTime} - {resource.availabilityEndTime}
-                    </p>
-                  </div>
-                </div>
-
-                <div style={{ borderTop: '1px solid rgba(99, 102, 241, 0.1)', paddingTop: '1rem' }}>
-                  <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                    <strong>Location:</strong> {resource.building}, {resource.floor}, {resource.location}
-                  </p>
-                </div>
-
-                {resource.description && (
-                  <p style={{
-                    margin: '0.75rem 0 0 0',
-                    color: 'var(--text-muted)',
-                    fontSize: '0.9rem',
-                    lineHeight: '1.4'
-                  }}>
-                    {resource.description}
-                  </p>
-                )}
-
-                {/* View Details Button — all roles */}
-                <div style={{
-                  marginTop: '1rem',
-                  paddingTop: '0.75rem',
-                  borderTop: '1px solid rgba(99, 102, 241, 0.08)'
-                }}>
-                  <button
-                    onClick={() => handleViewDetails(resource)}
-                    style={{
-                      width: '100%',
-                      padding: '0.7rem',
-                      background: 'linear-gradient(135deg, rgba(79,70,229,0.08) 0%, rgba(139,92,246,0.12) 100%)',
-                      border: '1px solid rgba(99,102,241,0.15)',
-                      color: 'var(--primary-color)',
-                      borderRadius: '8px',
-                      cursor: 'pointer',
-                      fontWeight: '600',
-                      fontSize: '0.9rem',
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      background: 'rgba(0,0,0,0)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      gap: '0.5rem',
-                      transition: 'all 0.25s'
+                      opacity: 0,
+                      transition: 'opacity 0.3s ease'
                     }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = 'linear-gradient(135deg, rgba(79,70,229,0.15) 0%, rgba(139,92,246,0.2) 100%)';
-                      e.currentTarget.style.transform = 'translateY(-1px)';
-                      e.currentTarget.style.boxShadow = '0 4px 15px rgba(99,102,241,0.15)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = 'linear-gradient(135deg, rgba(79,70,229,0.08) 0%, rgba(139,92,246,0.12) 100%)';
-                      e.currentTarget.style.transform = 'translateY(0)';
-                      e.currentTarget.style.boxShadow = 'none';
+                      onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+                      onMouseLeave={(e) => e.currentTarget.style.opacity = '0'}
+                    >
+                      <div style={{
+                        background: 'rgba(99, 102, 241, 0.9)',
+                        color: 'white',
+                        padding: '0.5rem 1rem',
+                        borderRadius: '6px',
+                        fontSize: '0.9rem',
+                        fontWeight: '600'
+                      }}>
+                        🔍 View Full Image
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    style={{
+                      position: 'relative',
+                      width: '100%',
+                      height: '200px',
+                      background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%)',
+                      borderBottom: '1px solid rgba(99, 102, 241, 0.1)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexDirection: 'column',
+                      cursor: 'default'
                     }}
                   >
-                    📋 View Details
-                  </button>
-                </div>
-
-                {/* Admin Actions - Edit, Status Change & Delete Buttons */}
-                {isAdmin && (
-                  <div style={{
-                    display: 'flex',
-                    gap: '0.75rem',
-                    marginTop: '1rem',
-                    paddingTop: '1rem',
-                    borderTop: '1px solid rgba(99, 102, 241, 0.1)',
-                    flexWrap: 'wrap'
-                  }}>
-                    <button
-                      onClick={() => handleEdit(resource)}
-                      style={{
-                        flex: 1,
-                        minWidth: '100px',
-                        padding: '0.6rem 1rem',
-                        background: 'rgba(99, 102, 241, 0.1)',
-                        border: '1px solid rgba(99, 102, 241, 0.3)',
-                        color: 'var(--primary-color)',
-                        borderRadius: '6px',
-                        cursor: 'pointer',
-                        fontWeight: '600',
-                        fontSize: '0.9rem',
-                        transition: 'all 0.2s'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.background = 'rgba(99, 102, 241, 0.2)';
-                        e.currentTarget.style.borderColor = 'rgba(99, 102, 241, 0.5)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background = 'rgba(99, 102, 241, 0.1)';
-                        e.currentTarget.style.borderColor = 'rgba(99, 102, 241, 0.3)';
-                      }}
-                    >
-                      ✏️ Edit
-                    </button>
-                    <button
-                      onClick={() => setStatusChangeResource(resource)}
-                      style={{
-                        flex: 1,
-                        minWidth: '100px',
-                        padding: '0.6rem 1rem',
-                        background: 'rgba(245, 158, 11, 0.1)',
-                        border: '1px solid rgba(245, 158, 11, 0.3)',
-                        color: '#f59e0b',
-                        borderRadius: '6px',
-                        cursor: 'pointer',
-                        fontWeight: '600',
-                        fontSize: '0.9rem',
-                        transition: 'all 0.2s'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.background = 'rgba(245, 158, 11, 0.2)';
-                        e.currentTarget.style.borderColor = 'rgba(245, 158, 11, 0.5)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background = 'rgba(245, 158, 11, 0.1)';
-                        e.currentTarget.style.borderColor = 'rgba(245, 158, 11, 0.3)';
-                      }}
-                    >
-                      ⚙️ Status
-                    </button>
-                    <button
-                      onClick={() => handleDelete(resource.id, resource.name)}
-                      style={{
-                        flex: 1,
-                        minWidth: '100px',
-                        padding: '0.6rem 1rem',
-                        background: 'rgba(239, 68, 68, 0.1)',
-                        border: '1px solid rgba(239, 68, 68, 0.3)',
-                        color: '#ef4444',
-                        borderRadius: '6px',
-                        cursor: 'pointer',
-                        fontWeight: '600',
-                        fontSize: '0.9rem',
-                        transition: 'all 0.2s'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)';
-                        e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.5)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)';
-                        e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.3)';
-                      }}
-                    >
-                      🗑️ Delete
-                    </button>
+                    <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>🏢</div>
+                    <p style={{ margin: 0, color: 'rgba(99, 102, 241, 0.6)', fontSize: '0.9rem', fontWeight: '500' }}>
+                      No Image Added
+                    </p>
                   </div>
                 )}
+
+                <div style={{ padding: '1.5rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '0.75rem' }}>
+                    <div>
+                      <h3 style={{ margin: 0, color: 'var(--text-dark)', fontSize: '1.2rem' }}>
+                        {resource.name}
+                      </h3>
+                      <p style={{ margin: '0.25rem 0 0 0', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                        Code: {resource.resourceCode}
+                      </p>
+                    </div>
+                    <span
+                      className="badge"
+                      style={{
+                        background: getStatusBadgeColor(resource.status),
+                        color: 'white',
+                        padding: '0.4rem 0.8rem',
+                        borderRadius: '20px',
+                        fontSize: '0.8rem',
+                        fontWeight: '600',
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
+                      {resource.status}
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '1rem', fontSize: '0.9rem' }}>
+                    <div>
+                      <p style={{ margin: 0, color: 'var(--text-muted)' }}>Type</p>
+                      <p style={{ margin: '0.25rem 0 0 0', color: 'var(--text-dark)', fontWeight: '500' }}>
+                        {resource.type}
+                      </p>
+                    </div>
+                    <div>
+                      <p style={{ margin: 0, color: 'var(--text-muted)' }}>Category</p>
+                      <p style={{ margin: '0.25rem 0 0 0', color: 'var(--text-dark)', fontWeight: '500' }}>
+                        {resource.category}
+                      </p>
+                    </div>
+                    <div>
+                      <p style={{ margin: 0, color: 'var(--text-muted)' }}>Capacity</p>
+                      <p style={{ margin: '0.25rem 0 0 0', color: 'var(--text-dark)', fontWeight: '500' }}>
+                        {resource.capacity} persons
+                      </p>
+                    </div>
+                    <div>
+                      <p style={{ margin: 0, color: 'var(--text-muted)' }}>Hours</p>
+                      <p style={{ margin: '0.25rem 0 0 0', color: 'var(--text-dark)', fontWeight: '500' }}>
+                        {resource.availabilityStartTime} - {resource.availabilityEndTime}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div style={{ borderTop: '1px solid rgba(99, 102, 241, 0.1)', paddingTop: '1rem' }}>
+                    <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                      <strong>Location:</strong> {resource.building}, {resource.floor}, {resource.location}
+                    </p>
+                  </div>
+
+                  {resource.description && (
+                    <p style={{
+                      margin: '0.75rem 0 0 0',
+                      color: 'var(--text-muted)',
+                      fontSize: '0.9rem',
+                      lineHeight: '1.4'
+                    }}>
+                      {resource.description}
+                    </p>
+                  )}
+
+                  {/* View Details Button — all roles */}
+                  <div style={{
+                    marginTop: '1rem',
+                    paddingTop: '0.75rem',
+                    borderTop: '1px solid rgba(99, 102, 241, 0.08)'
+                  }}>
+                    <button
+                      onClick={() => handleViewDetails(resource)}
+                      style={{
+                        width: '100%',
+                        padding: '0.7rem',
+                        background: 'linear-gradient(135deg, rgba(79,70,229,0.08) 0%, rgba(139,92,246,0.12) 100%)',
+                        border: '1px solid rgba(99,102,241,0.15)',
+                        color: 'var(--primary-color)',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        fontWeight: '600',
+                        fontSize: '0.9rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '0.5rem',
+                        transition: 'all 0.25s'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = 'linear-gradient(135deg, rgba(79,70,229,0.15) 0%, rgba(139,92,246,0.2) 100%)';
+                        e.currentTarget.style.transform = 'translateY(-1px)';
+                        e.currentTarget.style.boxShadow = '0 4px 15px rgba(99,102,241,0.15)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'linear-gradient(135deg, rgba(79,70,229,0.08) 0%, rgba(139,92,246,0.12) 100%)';
+                        e.currentTarget.style.transform = 'translateY(0)';
+                        e.currentTarget.style.boxShadow = 'none';
+                      }}
+                    >
+                      📋 View Details
+                    </button>
+                  </div>
+
+                  {/* Admin Actions - Edit, Status Change & Delete Buttons */}
+                  {isAdmin && (
+                    <div style={{
+                      display: 'flex',
+                      gap: '0.75rem',
+                      marginTop: '1rem',
+                      paddingTop: '1rem',
+                      borderTop: '1px solid rgba(99, 102, 241, 0.1)',
+                      flexWrap: 'wrap'
+                    }}>
+                      <button
+                        onClick={() => handleEdit(resource)}
+                        style={{
+                          flex: 1,
+                          minWidth: '100px',
+                          padding: '0.6rem 1rem',
+                          background: 'rgba(99, 102, 241, 0.1)',
+                          border: '1px solid rgba(99, 102, 241, 0.3)',
+                          color: 'var(--primary-color)',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          fontWeight: '600',
+                          fontSize: '0.9rem',
+                          transition: 'all 0.2s'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = 'rgba(99, 102, 241, 0.2)';
+                          e.currentTarget.style.borderColor = 'rgba(99, 102, 241, 0.5)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = 'rgba(99, 102, 241, 0.1)';
+                          e.currentTarget.style.borderColor = 'rgba(99, 102, 241, 0.3)';
+                        }}
+                      >
+                        ✏️ Edit
+                      </button>
+                      <button
+                        onClick={() => setStatusChangeResource(resource)}
+                        style={{
+                          flex: 1,
+                          minWidth: '100px',
+                          padding: '0.6rem 1rem',
+                          background: 'rgba(245, 158, 11, 0.1)',
+                          border: '1px solid rgba(245, 158, 11, 0.3)',
+                          color: '#f59e0b',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          fontWeight: '600',
+                          fontSize: '0.9rem',
+                          transition: 'all 0.2s'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = 'rgba(245, 158, 11, 0.2)';
+                          e.currentTarget.style.borderColor = 'rgba(245, 158, 11, 0.5)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = 'rgba(245, 158, 11, 0.1)';
+                          e.currentTarget.style.borderColor = 'rgba(245, 158, 11, 0.3)';
+                        }}
+                      >
+                        ⚙️ Status
+                      </button>
+                      <button
+                        onClick={() => handleDelete(resource.id, resource.name)}
+                        style={{
+                          flex: 1,
+                          minWidth: '100px',
+                          padding: '0.6rem 1rem',
+                          background: 'rgba(239, 68, 68, 0.1)',
+                          border: '1px solid rgba(239, 68, 68, 0.3)',
+                          color: '#ef4444',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          fontWeight: '600',
+                          fontSize: '0.9rem',
+                          transition: 'all 0.2s'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)';
+                          e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.5)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)';
+                          e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+                        }}
+                      >
+                        🗑️ Delete
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
-      )}
+            ))}
+          </div>
+        )}
 
-      {/* Image Modal - Available for both Admin and User */}
-      {selectedImageModal && (
-        <div
-          onClick={() => setSelectedImageModal(null)}
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(0, 0, 0, 0.8)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-            padding: '1rem'
-          }}
-        >
+        {/* Image Modal - Available for both Admin and User */}
+        {selectedImageModal && (
           <div
-            onClick={(e) => e.stopPropagation()}
+            onClick={() => setSelectedImageModal(null)}
             style={{
-              background: 'white',
-              borderRadius: '15px',
-              overflow: 'hidden',
-              maxWidth: '90vw',
-              maxHeight: '90vh',
-              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
-              display: 'flex',
-              flexDirection: 'column'
-            }}
-          >
-            {/* Close Button */}
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              padding: '1rem',
-              borderBottom: '1px solid rgba(99, 102, 241, 0.1)',
-              background: 'rgba(99, 102, 241, 0.05)'
-            }}>
-              <h2 style={{ margin: 0, color: 'var(--text-dark)' }}>
-                {selectedImageModal.name}
-              </h2>
-              <button
-                onClick={() => setSelectedImageModal(null)}
-                style={{
-                  background: 'rgba(239, 68, 68, 0.1)',
-                  border: 'none',
-                  color: '#ef4444',
-                  fontSize: '1.5rem',
-                  cursor: 'pointer',
-                  width: '40px',
-                  height: '40px',
-                  borderRadius: '8px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  transition: 'background 0.2s'
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)'}
-                onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'}
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* Image Container */}
-            <div style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(0, 0, 0, 0.8)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              padding: '2rem',
-              background: '#f8f9fa',
-              overflowY: 'auto',
-              maxHeight: 'calc(90vh - 200px)'
-            }}>
-              <img
-                src={selectedImageModal.imageUrl}
-                alt={selectedImageModal.name}
-                style={{
-                  maxWidth: '100%',
-                  maxHeight: '100%',
-                  borderRadius: '8px',
-                  objectFit: 'contain'
-                }}
-              />
-            </div>
-
-            {/* Resource Info */}
-            <div style={{
-              padding: '1.5rem',
-              borderTop: '1px solid rgba(99, 102, 241, 0.1)',
-              background: 'white',
-              maxHeight: '200px',
-              overflowY: 'auto'
-            }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
-                <div>
-                  <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.9rem' }}>Resource Code</p>
-                  <p style={{ margin: '0.25rem 0 0 0', color: 'var(--text-dark)', fontWeight: '600' }}>
-                    {selectedImageModal.resourceCode}
-                  </p>
-                </div>
-                <div>
-                  <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.9rem' }}>Type</p>
-                  <p style={{ margin: '0.25rem 0 0 0', color: 'var(--text-dark)', fontWeight: '600' }}>
-                    {selectedImageModal.type}
-                  </p>
-                </div>
-                <div>
-                  <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.9rem' }}>Category</p>
-                  <p style={{ margin: '0.25rem 0 0 0', color: 'var(--text-dark)', fontWeight: '600' }}>
-                    {selectedImageModal.category}
-                  </p>
-                </div>
-                <div>
-                  <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.9rem' }}>Capacity</p>
-                  <p style={{ margin: '0.25rem 0 0 0', color: 'var(--text-dark)', fontWeight: '600' }}>
-                    {selectedImageModal.capacity} persons
-                  </p>
-                </div>
-                <div>
-                  <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.9rem' }}>Location</p>
-                  <p style={{ margin: '0.25rem 0 0 0', color: 'var(--text-dark)', fontWeight: '600' }}>
-                    {selectedImageModal.building}, {selectedImageModal.floor}
-                  </p>
-                </div>
-                <div>
-                  <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.9rem' }}>Hours</p>
-                  <p style={{ margin: '0.25rem 0 0 0', color: 'var(--text-dark)', fontWeight: '600' }}>
-                    {selectedImageModal.availabilityStartTime} - {selectedImageModal.availabilityEndTime}
-                  </p>
-                </div>
-              </div>
-
-              {selectedImageModal.description && (
-                <div>
-                  <p style={{ margin: '0 0 0.5rem 0', color: 'var(--text-muted)', fontSize: '0.9rem', fontWeight: '600' }}>
-                    Description
-                  </p>
-                  <p style={{ margin: 0, color: 'var(--text-dark)', fontSize: '0.9rem', lineHeight: '1.5' }}>
-                    {selectedImageModal.description}
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {/* Close Button */}
-            <div style={{
-              padding: '1rem',
-              borderTop: '1px solid rgba(99, 102, 241, 0.1)',
-              background: 'rgba(99, 102, 241, 0.05)',
-              display: 'flex',
-              gap: '1rem'
-            }}>
-              <button
-                onClick={() => setSelectedImageModal(null)}
-                className="btn btn-primary"
-                style={{ flex: 1 }}
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Status Change Modal - Admin Only */}
-      {statusChangeResource && isAdmin && (
-        <div
-          onClick={() => setStatusChangeResource(null)}
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(0, 0, 0, 0.6)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-            padding: '1rem'
-          }}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              background: 'white',
-              borderRadius: '15px',
-              overflow: 'hidden',
-              maxWidth: '450px',
-              width: '100%',
-              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)'
+              zIndex: 1000,
+              padding: '1rem'
             }}
           >
-            {/* Header */}
-            <div style={{
-              padding: '1.5rem',
-              borderBottom: '1px solid rgba(99, 102, 241, 0.1)',
-              background: 'rgba(99, 102, 241, 0.05)'
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                background: 'white',
+                borderRadius: '15px',
+                overflow: 'hidden',
+                maxWidth: '90vw',
+                maxHeight: '90vh',
+                boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
+                display: 'flex',
+                flexDirection: 'column'
+              }}
+            >
+              {/* Close Button */}
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '1rem',
+                borderBottom: '1px solid rgba(99, 102, 241, 0.1)',
+                background: 'rgba(99, 102, 241, 0.05)'
+              }}>
                 <h2 style={{ margin: 0, color: 'var(--text-dark)' }}>
-                  Change Status
+                  {selectedImageModal.name}
                 </h2>
                 <button
-                  onClick={() => setStatusChangeResource(null)}
+                  onClick={() => setSelectedImageModal(null)}
                   style={{
                     background: 'rgba(239, 68, 68, 0.1)',
                     border: 'none',
@@ -2754,7 +2652,8 @@ const Facilities = () => {
                     borderRadius: '8px',
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center'
+                    justifyContent: 'center',
+                    transition: 'background 0.2s'
                   }}
                   onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)'}
                   onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'}
@@ -2762,103 +2661,265 @@ const Facilities = () => {
                   ✕
                 </button>
               </div>
-              <p style={{ margin: '0.5rem 0 0 0', color: 'var(--text-muted)', fontSize: '0.95rem' }}>
-                {statusChangeResource.name}
-              </p>
-            </div>
 
-            {/* Content */}
-            <div style={{ padding: '2rem' }}>
-              <p style={{ margin: '0 0 1.5rem 0', color: 'var(--text-dark)', fontWeight: '500' }}>
-                Current Status: <span style={{ 
-                  color: getStatusBadgeColor(statusChangeResource.status),
-                  fontWeight: '600'
-                }}>
-                  {statusChangeResource.status}
-                </span>
-              </p>
+              {/* Image Container */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '2rem',
+                background: '#f8f9fa',
+                overflowY: 'auto',
+                maxHeight: 'calc(90vh - 200px)'
+              }}>
+                <img
+                  src={selectedImageModal.imageUrl}
+                  alt={selectedImageModal.name}
+                  style={{
+                    maxWidth: '100%',
+                    maxHeight: '100%',
+                    borderRadius: '8px',
+                    objectFit: 'contain'
+                  }}
+                />
+              </div>
 
-              <p style={{ margin: '0 0 1rem 0', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-                Select new status:
-              </p>
+              {/* Resource Info */}
+              <div style={{
+                padding: '1.5rem',
+                borderTop: '1px solid rgba(99, 102, 241, 0.1)',
+                background: 'white',
+                maxHeight: '200px',
+                overflowY: 'auto'
+              }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                  <div>
+                    <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.9rem' }}>Resource Code</p>
+                    <p style={{ margin: '0.25rem 0 0 0', color: 'var(--text-dark)', fontWeight: '600' }}>
+                      {selectedImageModal.resourceCode}
+                    </p>
+                  </div>
+                  <div>
+                    <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.9rem' }}>Type</p>
+                    <p style={{ margin: '0.25rem 0 0 0', color: 'var(--text-dark)', fontWeight: '600' }}>
+                      {selectedImageModal.type}
+                    </p>
+                  </div>
+                  <div>
+                    <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.9rem' }}>Category</p>
+                    <p style={{ margin: '0.25rem 0 0 0', color: 'var(--text-dark)', fontWeight: '600' }}>
+                      {selectedImageModal.category}
+                    </p>
+                  </div>
+                  <div>
+                    <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.9rem' }}>Capacity</p>
+                    <p style={{ margin: '0.25rem 0 0 0', color: 'var(--text-dark)', fontWeight: '600' }}>
+                      {selectedImageModal.capacity} persons
+                    </p>
+                  </div>
+                  <div>
+                    <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.9rem' }}>Location</p>
+                    <p style={{ margin: '0.25rem 0 0 0', color: 'var(--text-dark)', fontWeight: '600' }}>
+                      {selectedImageModal.building}, {selectedImageModal.floor}
+                    </p>
+                  </div>
+                  <div>
+                    <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.9rem' }}>Hours</p>
+                    <p style={{ margin: '0.25rem 0 0 0', color: 'var(--text-dark)', fontWeight: '600' }}>
+                      {selectedImageModal.availabilityStartTime} - {selectedImageModal.availabilityEndTime}
+                    </p>
+                  </div>
+                </div>
 
-              <div style={{ display: 'grid', gap: '0.75rem' }}>
-                {['ACTIVE', 'UNDER_MAINTENANCE', 'OUT_OF_SERVICE'].map((status) => (
-                  <button
-                    key={status}
-                    onClick={() => handleChangeStatus(statusChangeResource.id, status)}
-                    disabled={loading}
-                    style={{
-                      padding: '1rem',
-                      background: statusChangeResource.status === status ? 
-                        'rgba(99, 102, 241, 0.15)' : 'rgba(99, 102, 241, 0.05)',
-                      border: `2px solid ${statusChangeResource.status === status ? 
-                        'rgba(99, 102, 241, 0.5)' : 'rgba(99, 102, 241, 0.2)'}`,
-                      borderRadius: '8px',
-                      cursor: 'pointer',
-                      fontWeight: '600',
-                      fontSize: '0.95rem',
-                      color: 'var(--text-dark)',
-                      transition: 'all 0.2s',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.75rem',
-                      opacity: loading ? 0.6 : 1
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!loading) {
-                        e.currentTarget.style.background = 'rgba(99, 102, 241, 0.2)';
-                        e.currentTarget.style.borderColor = 'rgba(99, 102, 241, 0.5)';
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = statusChangeResource.status === status ? 
-                        'rgba(99, 102, 241, 0.15)' : 'rgba(99, 102, 241, 0.05)';
-                      e.currentTarget.style.borderColor = statusChangeResource.status === status ? 
-                        'rgba(99, 102, 241, 0.5)' : 'rgba(99, 102, 241, 0.2)';
-                    }}
-                  >
-                    <span style={{ fontSize: '1.2rem' }}>
-                      {status === 'ACTIVE' && '✅'}
-                      {status === 'UNDER_MAINTENANCE' && '🔧'}
-                      {status === 'OUT_OF_SERVICE' && '⛔'}
-                    </span>
-                    <div style={{ textAlign: 'left' }}>
-                      <div style={{ fontWeight: '600', color: 'var(--text-dark)' }}>
-                        {status}
-                      </div>
-                      <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
-                        {status === 'ACTIVE' && 'Resource is operational and available'}
-                        {status === 'UNDER_MAINTENANCE' && 'Resource is under maintenance'}
-                        {status === 'OUT_OF_SERVICE' && 'Resource is out of service'}
-                      </div>
-                    </div>
-                  </button>
-                ))}
+                {selectedImageModal.description && (
+                  <div>
+                    <p style={{ margin: '0 0 0.5rem 0', color: 'var(--text-muted)', fontSize: '0.9rem', fontWeight: '600' }}>
+                      Description
+                    </p>
+                    <p style={{ margin: 0, color: 'var(--text-dark)', fontSize: '0.9rem', lineHeight: '1.5' }}>
+                      {selectedImageModal.description}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Close Button */}
+              <div style={{
+                padding: '1rem',
+                borderTop: '1px solid rgba(99, 102, 241, 0.1)',
+                background: 'rgba(99, 102, 241, 0.05)',
+                display: 'flex',
+                gap: '1rem'
+              }}>
+                <button
+                  onClick={() => setSelectedImageModal(null)}
+                  className="btn btn-primary"
+                  style={{ flex: 1 }}
+                >
+                  Close
+                </button>
               </div>
             </div>
+          </div>
+        )}
 
-            {/* Footer */}
-            <div style={{
-              padding: '1rem',
-              borderTop: '1px solid rgba(99, 102, 241, 0.1)',
-              background: 'rgba(99, 102, 241, 0.02)',
+        {/* Status Change Modal - Admin Only */}
+        {statusChangeResource && isAdmin && (
+          <div
+            onClick={() => setStatusChangeResource(null)}
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(0, 0, 0, 0.6)',
               display: 'flex',
-              gap: '1rem'
-            }}>
-              <button
-                onClick={() => setStatusChangeResource(null)}
-                className="btn btn-outline"
-                style={{ flex: 1 }}
-              >
-                Cancel
-              </button>
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 1000,
+              padding: '1rem'
+            }}
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                background: 'white',
+                borderRadius: '15px',
+                overflow: 'hidden',
+                maxWidth: '450px',
+                width: '100%',
+                boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)'
+              }}
+            >
+              {/* Header */}
+              <div style={{
+                padding: '1.5rem',
+                borderBottom: '1px solid rgba(99, 102, 241, 0.1)',
+                background: 'rgba(99, 102, 241, 0.05)'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <h2 style={{ margin: 0, color: 'var(--text-dark)' }}>
+                    Change Status
+                  </h2>
+                  <button
+                    onClick={() => setStatusChangeResource(null)}
+                    style={{
+                      background: 'rgba(239, 68, 68, 0.1)',
+                      border: 'none',
+                      color: '#ef4444',
+                      fontSize: '1.5rem',
+                      cursor: 'pointer',
+                      width: '40px',
+                      height: '40px',
+                      borderRadius: '8px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)'}
+                    onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'}
+                  >
+                    ✕
+                  </button>
+                </div>
+                <p style={{ margin: '0.5rem 0 0 0', color: 'var(--text-muted)', fontSize: '0.95rem' }}>
+                  {statusChangeResource.name}
+                </p>
+              </div>
+
+              {/* Content */}
+              <div style={{ padding: '2rem' }}>
+                <p style={{ margin: '0 0 1.5rem 0', color: 'var(--text-dark)', fontWeight: '500' }}>
+                  Current Status: <span style={{
+                    color: getStatusBadgeColor(statusChangeResource.status),
+                    fontWeight: '600'
+                  }}>
+                    {statusChangeResource.status}
+                  </span>
+                </p>
+
+                <p style={{ margin: '0 0 1rem 0', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                  Select new status:
+                </p>
+
+                <div style={{ display: 'grid', gap: '0.75rem' }}>
+                  {['ACTIVE', 'UNDER_MAINTENANCE', 'OUT_OF_SERVICE'].map((status) => (
+                    <button
+                      key={status}
+                      onClick={() => handleChangeStatus(statusChangeResource.id, status)}
+                      disabled={loading}
+                      style={{
+                        padding: '1rem',
+                        background: statusChangeResource.status === status ?
+                          'rgba(99, 102, 241, 0.15)' : 'rgba(99, 102, 241, 0.05)',
+                        border: `2px solid ${statusChangeResource.status === status ?
+                          'rgba(99, 102, 241, 0.5)' : 'rgba(99, 102, 241, 0.2)'}`,
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        fontWeight: '600',
+                        fontSize: '0.95rem',
+                        color: 'var(--text-dark)',
+                        transition: 'all 0.2s',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.75rem',
+                        opacity: loading ? 0.6 : 1
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!loading) {
+                          e.currentTarget.style.background = 'rgba(99, 102, 241, 0.2)';
+                          e.currentTarget.style.borderColor = 'rgba(99, 102, 241, 0.5)';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = statusChangeResource.status === status ?
+                          'rgba(99, 102, 241, 0.15)' : 'rgba(99, 102, 241, 0.05)';
+                        e.currentTarget.style.borderColor = statusChangeResource.status === status ?
+                          'rgba(99, 102, 241, 0.5)' : 'rgba(99, 102, 241, 0.2)';
+                      }}
+                    >
+                      <span style={{ fontSize: '1.2rem' }}>
+                        {status === 'ACTIVE' && '✅'}
+                        {status === 'UNDER_MAINTENANCE' && '🔧'}
+                        {status === 'OUT_OF_SERVICE' && '⛔'}
+                      </span>
+                      <div style={{ textAlign: 'left' }}>
+                        <div style={{ fontWeight: '600', color: 'var(--text-dark)' }}>
+                          {status}
+                        </div>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
+                          {status === 'ACTIVE' && 'Resource is operational and available'}
+                          {status === 'UNDER_MAINTENANCE' && 'Resource is under maintenance'}
+                          {status === 'OUT_OF_SERVICE' && 'Resource is out of service'}
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div style={{
+                padding: '1rem',
+                borderTop: '1px solid rgba(99, 102, 241, 0.1)',
+                background: 'rgba(99, 102, 241, 0.02)',
+                display: 'flex',
+                gap: '1rem'
+              }}>
+                <button
+                  onClick={() => setStatusChangeResource(null)}
+                  className="btn btn-outline"
+                  style={{ flex: 1 }}
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
-    </div>
-  );
+        )}
+      </div>
+    );
   }
 };
 
