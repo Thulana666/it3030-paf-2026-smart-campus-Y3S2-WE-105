@@ -37,7 +37,17 @@ public interface BookingRepository extends MongoRepository<Booking, String> {
      * @param requestedEnd   inclusive end of the new booking window
      * @return list of conflicting {@link Booking} documents; empty if no conflicts
      */
-    @Query("{ 'resourceId': ?0, 'startTime': { $lt: ?2 }, 'endTime': { $gt: ?1 } }")
+    @Query("{ 'resourceId': ?0, 'status': 'APPROVED', 'startTime': { $lt: ?2 }, 'endTime': { $gt: ?1 } }")
+    List<Booking> findOverlappingApprovedBookings(String resourceId,
+                                                  LocalDateTime requestedStart,
+                                                  LocalDateTime requestedEnd);
+
+    @Query("{ 'resourceId': ?0, 'status': 'PENDING', 'startTime': { $lt: ?2 }, 'endTime': { $gt: ?1 } }")
+    List<Booking> findOverlappingPendingBookings(String resourceId,
+                                                 LocalDateTime requestedStart,
+                                                 LocalDateTime requestedEnd);
+
+    @Query("{ 'resourceId': ?0, 'status': { $nin: ['REJECTED', 'CANCELLED'] }, 'startTime': { $lt: ?2 }, 'endTime': { $gt: ?1 } }")
     List<Booking> findOverlappingBookings(String resourceId,
                                           LocalDateTime requestedStart,
                                           LocalDateTime requestedEnd);

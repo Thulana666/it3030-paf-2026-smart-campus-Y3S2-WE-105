@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { getAllBookings, updateBookingStatus } from '../../services/bookingService';
+import { getAllResources } from '../../services/resourceService';
 
 const STATUS_META = {
   PENDING:  { label: 'Pending',  color: '#f59e0b', bg: 'rgba(245,158,11,0.12)'  },
@@ -22,6 +23,7 @@ export default function AdminBookingDashboard() {
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const [resources, setResources] = useState([]);
 
   const fetchBookings = async () => {
     setLoading(true);
@@ -39,14 +41,31 @@ export default function AdminBookingDashboard() {
     }
   };
 
+  const fetchResources = async () => {
+    try {
+      const data = await getAllResources();
+      setResources(data);
+    } catch (err) {
+      console.error('Failed to load resources:', err);
+    }
+  };
+
   useEffect(() => {
     fetchBookings();
+    fetchResources();
   }, []);
+
+  const resourceMap = resources.reduce((acc, r) => {
+    acc[r.id] = r;
+    return acc;
+  }, {});
 
   const filteredBookings = useMemo(() => {
     return bookings.filter(b => {
+      const resourceName = resourceMap[b.resourceId]?.name || '';
       const matchesSearch = 
         b.resourceId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        resourceName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         b.studentId.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (b.purpose && b.purpose.toLowerCase().includes(searchTerm.toLowerCase()));
       
@@ -116,17 +135,18 @@ export default function AdminBookingDashboard() {
       </div>
 
       {/* ── Filter Bar ── */}
-      <div className="bk-filter-bar glass" style={{ marginBottom: '2rem' }}>
-        <div className="bk-search-wrapper">
-          <svg className="bk-search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <div className="bk-filter-bar glass" style={{ marginBottom: '2rem', padding: '1.25rem', display: 'flex', gap: '1rem' }}>
+        <div className="bk-search-wrapper" style={{ flex: 1 }}>
+          <svg className="bk-search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
           </svg>
           <input 
             type="text" 
-            placeholder="Search resources, students, or purpose..." 
+            placeholder="Search by Resource, Student ID or Purpose..." 
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="bk-search-input"
+            style={{ paddingLeft: '2.8rem', height: '45px' }}
           />
         </div>
         
@@ -134,12 +154,13 @@ export default function AdminBookingDashboard() {
           className="bk-filter-dropdown"
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
+          style={{ height: '45px', width: '200px' }}
         >
           <option value="ALL">All Statuses</option>
-          <option value="PENDING">Pending Only</option>
-          <option value="APPROVED">Approved Only</option>
-          <option value="REJECTED">Rejected Only</option>
-          <option value="CANCELLED">Cancelled Only</option>
+          <option value="PENDING">⏳ Pending Only</option>
+          <option value="APPROVED">✅ Approved Only</option>
+          <option value="REJECTED">❌ Rejected Only</option>
+          <option value="CANCELLED">🚫 Cancelled Only</option>
         </select>
       </div>
 
@@ -182,7 +203,16 @@ export default function AdminBookingDashboard() {
                           <div style={{ background: '#f1f5f9', padding: '0.5rem', borderRadius: '8px', color: '#64748b' }}>
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
                           </div>
-                          <span style={{ fontWeight: '600', color: '#0f172a', fontSize: '0.875rem' }}>{b.resourceId}</span>
+                          <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            <span style={{ fontWeight: '600', color: '#0f172a', fontSize: '0.875rem' }}>
+                              {resourceMap[b.resourceId]?.name || b.resourceId}
+                            </span>
+                            {resourceMap[b.resourceId]?.category && (
+                              <span style={{ fontSize: '0.7rem', color: '#64748b' }}>
+                                {resourceMap[b.resourceId].category}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </td>
 
@@ -227,8 +257,9 @@ export default function AdminBookingDashboard() {
                       <td style={{ padding: '1rem 1rem', textAlign: 'center' }}>
                         <span style={{ 
                           display: 'inline-flex', alignItems: 'center', gap: '6px',
-                          padding: '0.25rem 0.75rem', borderRadius: '9999px', fontSize: '0.7rem', fontWeight: '600',
-                          color: meta.color, background: meta.bg, textTransform: 'uppercase', letterSpacing: '0.05em'
+                          padding: '0.35rem 0.85rem', borderRadius: '9999px', fontSize: '0.65rem', fontWeight: '800',
+                          color: meta.color, background: meta.bg, textTransform: 'uppercase', letterSpacing: '0.05em',
+                          border: `1px solid ${meta.color}22`
                         }}>
                           <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: meta.color }}></div>
                           {meta.label}

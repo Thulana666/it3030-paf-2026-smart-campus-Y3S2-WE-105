@@ -6,6 +6,7 @@ import {
   getAllBookings,
   updateBookingStatus,
 } from '../../services/bookingService';
+import { getAllResources } from '../../services/resourceService';
 import BookingForm from '../../components/booking/BookingForm';
 import BookingList from '../../components/booking/BookingList';
 
@@ -20,6 +21,7 @@ export default function BookingSystem() {
   const [toast,       setToast]       = useState(null);
   const [searchTerm,  setSearchTerm]  = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const [resources, setResources] = useState([]);
 
   const studentId = user?.id || user?.email || '';
 
@@ -44,7 +46,19 @@ export default function BookingSystem() {
     }
   }, [user, studentId]);
 
-  useEffect(() => { fetchBookings(); }, [fetchBookings]);
+  const fetchResources = useCallback(async () => {
+    try {
+      const data = await getAllResources();
+      setResources(data);
+    } catch (err) {
+      console.error('Failed to load resources:', err);
+    }
+  }, []);
+
+  useEffect(() => { 
+    fetchBookings();
+    fetchResources();
+  }, [fetchBookings, fetchResources]);
 
   const stats = {
     total:    bookings.length,
@@ -191,6 +205,7 @@ export default function BookingSystem() {
         handleEdit={handleEdit}
         cancellingId={cancellingId} 
         openModal={openModal}
+        resources={resources}
       />
 
       {/* ── New Booking Modal Component ── */}

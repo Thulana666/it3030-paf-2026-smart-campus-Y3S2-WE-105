@@ -25,9 +25,11 @@ import java.util.List;
 public class BookingService {
 
     private final BookingRepository bookingRepository;
+    private final com.smartcampus.backend.repository.ResourceRepository resourceRepository;
 
-    public BookingService(BookingRepository bookingRepository) {
+    public BookingService(BookingRepository bookingRepository, com.smartcampus.backend.repository.ResourceRepository resourceRepository) {
         this.bookingRepository = bookingRepository;
+        this.resourceRepository = resourceRepository;
     }
 
     // -----------------------------------------------------------------------
@@ -53,7 +55,15 @@ public class BookingService {
         log.debug("Creating booking for resource '{}' from {} to {}",
                 booking.getResourceId(), booking.getStartTime(), booking.getEndTime());
 
-        // ── Conflict check ────────────────────────────────────────────────
+        // ── Resource validation ───────────────────────────────────────────
+        com.smartcampus.backend.model.Resource resource = resourceRepository.findById(booking.getResourceId())
+                .orElseThrow(() -> new ResourceNotFoundException("Resource", "id", booking.getResourceId()));
+
+        if (resource.getStatus() != com.smartcampus.backend.model.ResourceStatus.ACTIVE) {
+            throw new IllegalStateException("This resource is currently " + resource.getStatus() + " and cannot be booked.");
+        }
+
+        // ── Conflict check (Strict: block if any PENDING or APPROVED overlap exists) ──
         List<Booking> conflicts = bookingRepository.findOverlappingBookings(
                 booking.getResourceId(),
                 booking.getStartTime(),
@@ -61,10 +71,10 @@ public class BookingService {
         );
 
         if (!conflicts.isEmpty()) {
-            log.warn("Booking conflict detected for resource '{}': {} overlapping booking(s)",
+            log.warn("Booking conflict detected for resource '{}': {} active booking(s) overlap",
                     booking.getResourceId(), conflicts.size());
             throw new BookingConflictException(
-                    "Resource is already booked for this time: " + booking.getResourceId()
+                    "Resource is already reserved or requested for this time: " + booking.getResourceId()
             );
         }
 
@@ -131,6 +141,29 @@ public class BookingService {
         booking.setAdminReason(reason);
         Booking updated = bookingRepository.save(booking);
         log.info("Booking '{}' status updated to {} with reason saved", id, newStatus);
+
+        // ── Auto-reject overlapping pending bookings if APPROVED ──────────
+        if (newStatus == BookingStatus.APPROVED) {
+            List<Booking> overlappingPending = bookingRepository.findOverlappingPendingBookings(
+                    updated.getResourceId(),
+                    updated.getStartTime(),
+                    updated.getEndTime()
+            );
+            
+            // Exclude current booking
+            overlappingPending.removeIf(b -> b.getId().equals(id));
+            
+            if (!overlappingPending.isEmpty()) {
+                log.info("Auto-rejecting {} overlapping pending booking(s) for resource '{}'", 
+                        overlappingPending.size(), updated.getResourceId());
+                for (Booking pb : overlappingPending) {
+                    pb.setStatus(BookingStatus.REJECTED);
+                    pb.setAdminReason("Automated conflict resolution: Another request for this time slot was approved.");
+                }
+                bookingRepository.saveAll(overlappingPending);
+            }
+        }
+
         return updated;
     }
 
@@ -166,6 +199,14 @@ public class BookingService {
             !booking.getEndTime().equals(updatedBooking.getEndTime()) || 
             !booking.getResourceId().equals(updatedBooking.getResourceId())) {
             
+            // ── Resource validation for new resource ──────────────────────────
+            com.smartcampus.backend.model.Resource resource = resourceRepository.findById(updatedBooking.getResourceId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Resource", "id", updatedBooking.getResourceId()));
+
+            if (resource.getStatus() != com.smartcampus.backend.model.ResourceStatus.ACTIVE) {
+                throw new IllegalStateException("This resource is currently " + resource.getStatus() + " and cannot be booked.");
+            }
+
             booking.setStartTime(updatedBooking.getStartTime());
             booking.setEndTime(updatedBooking.getEndTime());
             booking.setResourceId(updatedBooking.getResourceId());
@@ -175,11 +216,11 @@ public class BookingService {
                     booking.getStartTime(),
                     booking.getEndTime()
             );
-            // Ignore this booking itself if it overlaps with its old timeslot
+            // Ignore this booking itself
             conflicts.removeIf(b -> b.getId().equals(id));
             
             if (!conflicts.isEmpty()) {
-                throw new BookingConflictException("Resource is already booked for this new time: " + booking.getResourceId());
+                throw new BookingConflictException("Resource is already reserved or requested for this new time: " + booking.getResourceId());
             }
         }
         
