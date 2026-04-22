@@ -8,30 +8,36 @@ const TicketDetail = () => {
   const navigate = useNavigate();
   const { user } = useContext(AuthContext);
 
-  const [ticket, setTicket] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [ticket,   setTicket]   = useState(null);
+  const [comments, setComments] = useState([]);
+  const [loading,  setLoading]  = useState(true);
+  const [error,    setError]    = useState(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   // Comment state
-  const [newComment, setNewComment] = useState('');
+  const [newComment,     setNewComment]     = useState('');
   const [commentLoading, setCommentLoading] = useState(false);
 
   // Resolution state
   const [resolutionStatus, setResolutionStatus] = useState('RESOLVED');
-  const [resolutionNotes, setResolutionNotes] = useState('');
-  const [resolveLoading, setResolveLoading] = useState(false);
+  const [resolutionNotes,  setResolutionNotes]  = useState('');
+  const [resolveLoading,   setResolveLoading]   = useState(false);
 
   useEffect(() => {
     fetchTicket();
   }, [id]);
 
+  // Loads ticket details AND comments from their separate endpoints
   const fetchTicket = async () => {
     try {
-      const data = await ticketService.getTicketById(id);
-      setTicket(data);
-      // Pre-fill resolution notes if it already exists
-      if (data.resolutionNotes) {
-        setResolutionNotes(data.resolutionNotes);
+      const [ticketData, commentsData] = await Promise.all([
+        ticketService.getTicketById(id),
+        ticketService.getComments(id),
+      ]);
+      setTicket(ticketData);
+      setComments(commentsData || []);
+      if (ticketData.resolutionNotes) {
+        setResolutionNotes(ticketData.resolutionNotes);
       }
     } catch (err) {
       console.error('Error fetching ticket details:', err);
@@ -67,6 +73,20 @@ const TicketDetail = () => {
     } catch (err) {
       console.error('Error deleting comment:', err);
       alert('Failed to delete comment');
+    }
+  };
+
+  const handleDeleteTicket = async () => {
+    if (!window.confirm('Are you sure you want to delete this ticket? This action cannot be undone.')) return;
+    setDeleteLoading(true);
+    try {
+      await ticketService.deleteTicket(id);
+      navigate('/dashboard/incident-tickets');
+    } catch (err) {
+      console.error('Error deleting ticket:', err);
+      alert(err.response?.data?.message || 'Failed to delete ticket. Only OPEN tickets can be deleted.');
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -151,12 +171,39 @@ const TicketDetail = () => {
             <h1 className="text-2xl md:text-3xl font-bold text-gray-900">{ticket.title}</h1>
           </div>
           
-          <div className="text-sm text-gray-500 flex flex-col items-start md:items-end">
-            <p>Category: <span className="font-medium text-gray-800">{ticket.category}</span></p>
-            {ticket.resourceId && (
-              <p>Resource ID: <span className="font-medium text-gray-800">{ticket.resourceId}</span></p>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem' }}>
+            <div className="text-sm text-gray-500" style={{ textAlign: 'right' }}>
+              <p>Category: <span className="font-medium text-gray-800">{ticket.category}</span></p>
+              {ticket.resourceId && (
+                <p>Resource ID: <span className="font-medium text-gray-800">{ticket.resourceId}</span></p>
+              )}
+              <p className="mt-1 text-xs">Created: {new Date(ticket.createdAt).toLocaleString()}</p>
+            </div>
+            {/* Owner actions — only shown for OPEN tickets */}
+            {user?.id === ticket.createdBy && ticket.status === 'OPEN' && (
+              <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem' }}>
+                <button
+                  className="btn btn-outline btn-sm"
+                  onClick={() => navigate(`/dashboard/tickets/${id}/edit`)}
+                  style={{ padding: '0.35rem 0.9rem', fontSize: '0.82rem' }}
+                >
+                  ✏️ Edit
+                </button>
+                <button
+                  className="btn btn-sm"
+                  onClick={handleDeleteTicket}
+                  disabled={deleteLoading}
+                  style={{
+                    padding: '0.35rem 0.9rem', fontSize: '0.82rem',
+                    background: 'rgba(220,38,38,0.1)', color: '#dc2626',
+                    border: '1px solid rgba(220,38,38,0.3)', borderRadius: 'var(--radius-sm)',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {deleteLoading ? 'Deleting…' : '🗑️ Delete'}
+                </button>
+              </div>
             )}
-            <p className="mt-1 text-xs">Created: {new Date(ticket.createdAt).toLocaleString()}</p>
           </div>
         </div>
 
@@ -165,25 +212,24 @@ const TicketDetail = () => {
           <p className="text-gray-800 whitespace-pre-wrap">{ticket.description}</p>
         </div>
 
-        {/* Images Section */}
-        {ticket.imageUrls && ticket.imageUrls.length > 0 && (
+        {/* Images Section — field is imagePaths from backend */}
+        {ticket.imagePaths && ticket.imagePaths.length > 0 && (
           <div className="mb-6">
             <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Attachments</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-              {ticket.imageUrls.map((imgUrl, index) => {
-                // Ensure URL is properly formatted to point to backend if it's a relative path
+              {ticket.imagePaths.map((imgUrl, index) => {
                 const fullUrl = imgUrl.startsWith('http') ? imgUrl : `http://localhost:8080${imgUrl.startsWith('/') ? '' : '/'}${imgUrl}`;
                 return (
                   <div key={index} className="relative aspect-video rounded-lg overflow-hidden border border-gray-200 group">
-                    <img 
-                      src={fullUrl} 
-                      alt={`Attachment ${index + 1}`} 
+                    <img
+                      src={fullUrl}
+                      alt={`Attachment ${index + 1}`}
                       className="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105"
                       onError={(e) => { e.target.src = 'https://via.placeholder.com/400x300?text=Image+Not+Found'; }}
                     />
-                    <a 
-                      href={fullUrl} 
-                      target="_blank" 
+                    <a
+                      href={fullUrl}
+                      target="_blank"
                       rel="noopener noreferrer"
                       className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white font-medium backdrop-blur-sm"
                     >
@@ -207,12 +253,12 @@ const TicketDetail = () => {
               Activity & Comments
             </h2>
 
-            {/* Comment List */}
+            {/* Comment List — loaded separately from /api/tickets/{id}/comments */}
             <div className="space-y-5 mb-8">
-              {!ticket.comments || ticket.comments.length === 0 ? (
+              {comments.length === 0 ? (
                 <p className="text-gray-500 italic text-center py-4 bg-gray-50 rounded-lg">No comments yet. Be the first to reply.</p>
               ) : (
-                ticket.comments.map((comment) => (
+                comments.map((comment) => (
                   <div key={comment.id} className={`p-4 rounded-xl flex flex-col gap-2 ${comment.authorId === user?.id ? 'bg-blue-50 border border-blue-100 ml-8' : 'bg-gray-50 border border-gray-100 mr-8'}`}>
                     <div className="flex justify-between items-start">
                       <div>
