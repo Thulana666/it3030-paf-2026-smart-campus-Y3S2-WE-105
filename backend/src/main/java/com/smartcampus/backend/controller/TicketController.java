@@ -33,6 +33,15 @@ public class TicketController {
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
+    @GetMapping("/{id}")
+    public ResponseEntity<TicketResponse> getTicketById(
+            @PathVariable String id,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+
+        TicketResponse response = TicketResponse.from(ticketService.getTicketById(id));
+        return ResponseEntity.ok(response);
+    }
+
     @GetMapping("/my")
     public ResponseEntity<List<TicketResponse>> getMyTickets(
             @AuthenticationPrincipal CustomUserDetails userDetails) {
@@ -65,6 +74,25 @@ public class TicketController {
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         
         ticketService.deleteComment(id, commentId, userDetails.getId());
+        return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<TicketResponse> updateTicket(
+            @PathVariable String id,
+            @Valid @RequestBody TicketCreateRequest request,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+
+        TicketResponse response = ticketService.updateTicket(id, request, userDetails.getId());
+        return ResponseEntity.ok(response);
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteTicket(
+            @PathVariable String id,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+
+        ticketService.deleteTicket(id, userDetails.getId());
         return ResponseEntity.noContent().build();
     }
 }
