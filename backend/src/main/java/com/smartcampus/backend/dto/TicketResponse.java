@@ -44,7 +44,7 @@ public class TicketResponse {
                 .createdBy(ticket.getCreatedBy())
                 .assignedTo(ticket.getAssignedTo())
                 .resourceId(ticket.getResourceId())
-                .imagePaths(ticket.getImagePaths())
+                .imagePaths(ticket.getImagePaths() != null ? ticket.getImagePaths() : java.util.Collections.emptyList())
                 .resolutionNotes(ticket.getResolutionNotes())
                 .rejectionReason(ticket.getRejectionReason())
                 .createdAt(ticket.getCreatedAt())
