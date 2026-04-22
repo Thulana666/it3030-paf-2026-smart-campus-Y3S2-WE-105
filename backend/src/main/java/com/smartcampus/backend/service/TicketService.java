@@ -81,6 +81,40 @@ public class TicketService {
                 .collect(Collectors.toList());
     }
 
+    public TicketResponse updateTicket(String ticketId, TicketCreateRequest request, String userId) {
+        Ticket ticket = getTicketById(ticketId);
+
+        if (!ticket.getCreatedBy().equals(userId)) {
+            throw new org.springframework.security.access.AccessDeniedException("You can only edit your own tickets");
+        }
+        if (ticket.getStatus() != TicketStatus.OPEN) {
+            throw new IllegalStateException("Only OPEN tickets can be edited");
+        }
+
+        ticket.setTitle(request.getTitle());
+        ticket.setDescription(request.getDescription());
+        ticket.setCategory(request.getCategory());
+        ticket.setContactDetails(request.getContactDetails());
+        ticket.setPriority(request.getPriority());
+        ticket.setResourceId(request.getResourceId());
+        ticket.setUpdatedAt(LocalDateTime.now());
+
+        return TicketResponse.from(ticketRepository.save(ticket));
+    }
+
+    public void deleteTicket(String ticketId, String userId) {
+        Ticket ticket = getTicketById(ticketId);
+
+        if (!ticket.getCreatedBy().equals(userId)) {
+            throw new org.springframework.security.access.AccessDeniedException("You can only delete your own tickets");
+        }
+        if (ticket.getStatus() != TicketStatus.OPEN) {
+            throw new IllegalStateException("Only OPEN tickets can be deleted");
+        }
+
+        ticketRepository.delete(ticket);
+    }
+
     public CommentResponse addComment(String ticketId, CommentRequest request, String userId) {
         Ticket ticket = getTicketById(ticketId);
 
