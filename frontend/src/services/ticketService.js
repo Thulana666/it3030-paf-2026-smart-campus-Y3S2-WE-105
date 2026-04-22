@@ -39,8 +39,23 @@ export const ticketService = {
     return response.data;
   },
 
+  getComments: async (id) => {
+    const response = await api.get(`/tickets/${id}/comments`);
+    return response.data;
+  },
+
   deleteComment: async (id, commentId) => {
     const response = await api.delete(`/tickets/${id}/comments/${commentId}`);
     return response.data;
-  }
+  },
+
+  updateTicket: async (id, payload) => {
+    // payload: { title, description, category, priority, contactDetails, resourceId }
+    const response = await api.put(`/tickets/${id}`, payload);
+    return response.data;
+  },
+
+  deleteTicket: async (id) => {
+    await api.delete(`/tickets/${id}`);
+  },
 };
