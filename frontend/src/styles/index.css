@@ -391,6 +391,171 @@ a:hover { color: var(--primary-hover); text-decoration: underline; }
 }
 .empty-state { text-align: center; padding: 4rem 2rem; color: var(--text-muted); }
 
+/* ==========================================
+   Ticket List Styles
+   ========================================== */
+.ticket-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.ticket-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  padding: 1.25rem 1.6rem;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  border-left: 4px solid transparent;
+}
+
+.ticket-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.1);
+}
+
+.ticket-card.priority-URGENT { border-left-color: #dc2626; }
+.ticket-card.priority-HIGH   { border-left-color: #ea580c; }
+.ticket-card.priority-MEDIUM { border-left-color: #ca8a04; }
+.ticket-card.priority-LOW    { border-left-color: #16a34a; }
+
+.ticket-card-left {
+  flex: 1;
+  min-width: 0;
+}
+
+.ticket-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.35rem;
+}
+
+.ticket-card-title {
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--text-dark);
+  margin-bottom: 0.2rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ticket-card-date {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.ticket-card-right {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  flex-shrink: 0;
+}
+
+/* Status badges */
+.ticket-status {
+  display: inline-block;
+  padding: 3px 12px;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+.ticket-status.status-OPEN        { color: #2563eb; background: rgba(37,99,235,0.1); }
+.ticket-status.status-IN_PROGRESS { color: #7c3aed; background: rgba(124,58,237,0.1); }
+.ticket-status.status-RESOLVED    { color: #059669; background: rgba(5,150,105,0.1); }
+.ticket-status.status-CLOSED      { color: #6b7280; background: rgba(107,114,128,0.1); }
+.ticket-status.status-REJECTED    { color: #dc2626; background: rgba(220,38,38,0.1); }
+
+/* Priority badges */
+.ticket-priority {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: 9999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.ticket-priority.priority-URGENT { color: #dc2626; background: rgba(220,38,38,0.1); }
+.ticket-priority.priority-HIGH   { color: #ea580c; background: rgba(234,88,12,0.1); }
+.ticket-priority.priority-MEDIUM { color: #ca8a04; background: rgba(202,138,4,0.1); }
+.ticket-priority.priority-LOW    { color: #16a34a; background: rgba(22,163,74,0.1); }
+
+.ticket-category-label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+/* Ticket page header */
+.ticket-page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding: 1.75rem 2rem;
+  border-radius: var(--radius-md);
+  margin-bottom: 1.75rem;
+  border-left: 5px solid #ef4444;
+}
+
+/* Ticket loading spinner */
+.ticket-spinner-wrap {
+  text-align: center;
+  padding: 4rem 0;
+  color: var(--text-muted);
+}
+
+.ticket-spinner {
+  width: 38px;
+  height: 38px;
+  border: 4px solid rgba(239,68,68,0.15);
+  border-top-color: #ef4444;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin: 0 auto 1rem;
+}
+
+/* Ticket empty state */
+.ticket-empty {
+  text-align: center;
+  padding: 3.5rem 2rem;
+  color: var(--text-muted);
+}
+
+.ticket-empty-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.ticket-empty h3 {
+  color: var(--text-dark);
+  margin-bottom: 0.5rem;
+}
+
+.ticket-empty p {
+  margin-bottom: 1.5rem;
+  font-size: 0.95rem;
+}
+
+/* Ticket error */
+.ticket-error {
+  padding: 1.5rem;
+  border-radius: var(--radius-sm);
+  color: #dc2626;
+  background: rgba(220,38,38,0.07);
+  border: 1px solid rgba(220,38,38,0.2);
+  font-size: 0.95rem;
+}
+
 /* Animations */
 @keyframes slideUp {
   from { opacity: 0; transform: translateY(20px); }
