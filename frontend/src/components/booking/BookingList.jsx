@@ -1,9 +1,10 @@
 import React from 'react';
 
 const STATUS_META = {
-  PENDING:  { label: 'Pending',  color: '#f59e0b', bg: 'rgba(245,158,11,0.12)'  },
-  APPROVED: { label: 'Approved', color: '#10b981', bg: 'rgba(16,185,129,0.12)'  },
-  REJECTED: { label: 'Rejected', color: '#ef4444', bg: 'rgba(239,68,68,0.12)'   },
+  PENDING:  { label: 'Pending',   color: '#f59e0b', bg: 'rgba(245,158,11,0.08)',  border: 'rgba(245,158,11,0.2)'  },
+  APPROVED: { label: 'Approved',  color: '#10b981', bg: 'rgba(16,185,129,0.08)',  border: 'rgba(16,185,129,0.2)'  },
+  REJECTED: { label: 'Rejected',  color: '#ef4444', bg: 'rgba(239,68,68,0.08)',   border: 'rgba(239,68,68,0.2)'   },
+  CANCELLED:{ label: 'Cancelled', color: '#94a3b8', bg: 'rgba(148,163,184,0.08)', border: 'rgba(148,163,184,0.2)' },
 };
 
 const fmt = (iso) => {
@@ -14,7 +15,7 @@ const fmt = (iso) => {
   });
 };
 
-export default function BookingList({ bookings, loading, user, handleCancel, handleStatusUpdate, cancellingId, openModal }) {
+export default function BookingList({ bookings, loading, user, handleCancel, handleStatusUpdate, cancellingId, openModal, handleEdit, currentUserId }) {
   if (loading) {
     return (
       <div className="flex-center" style={{ minHeight: '200px' }}>
@@ -55,9 +56,85 @@ export default function BookingList({ bookings, loading, user, handleCancel, han
                   </svg>
                   {b.resourceId}
                 </div>
-                <span className="bk-status-badge" style={{ color: meta.color, background: meta.bg }}>
-                  {meta.label}
-                </span>
+
+                {/* All Actions and Status on the Top Line */}
+                <div className="bk-card-header-actions">
+                  <span className="bk-status-badge" style={{ 
+                    color: meta.color, 
+                    background: meta.bg, 
+                    border: `1px solid ${meta.border}`,
+                    padding: '0.2rem 0.75rem',
+                    borderRadius: '999px',
+                    fontSize: '0.7rem',
+                    fontWeight: '700',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px'
+                  }}>
+                    {meta.label}
+                  </span>
+
+                  {/* Student Actions: Allow Cancel for PENDING or APPROVED */}
+                  {user?.role !== 'ADMIN' && currentUserId === b.studentId && (b.status === 'PENDING' || b.status === 'APPROVED') && (
+                    <div className="bk-action-group">
+                      <button
+                        className="btn btn-sm btn-outline bk-action-btn-slim"
+                        onClick={() => handleEdit && handleEdit(b)}
+                        title="Edit booking"
+                        style={{ padding: '0.25rem 0.6rem', fontSize: '0.75rem', borderRadius: '6px' }}
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" 
+                          stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                        </svg>
+                        Edit
+                      </button>
+                      <button
+                        className="btn btn-sm btn-delete-slim"
+                        onClick={() => handleCancel(b.id)}
+                        disabled={cancellingId === b.id}
+                        title="Cancel booking"
+                        style={{ padding: '0.25rem 0.6rem', fontSize: '0.75rem', borderRadius: '6px', opacity: 0.8 }}
+                      >
+                        {cancellingId === b.id ? (
+                          <div className="bk-btn-spinner" />
+                        ) : (
+                          <>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+                              stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                              <circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
+                            </svg>
+                            Cancel
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Admin Actions */}
+                  {b.status === 'PENDING' && user?.role === 'ADMIN' && (
+                    <div className="bk-action-group">
+                      <button 
+                        className="btn btn-sm btn-success-slim" 
+                        onClick={() => {
+                          const r = prompt("Add an optional approval note:");
+                          handleStatusUpdate(b.id, 'APPROVED', r || '');
+                        }}
+                      >
+                        Approve
+                      </button>
+                      <button 
+                        className="btn btn-sm btn-danger-slim" 
+                        onClick={() => {
+                          const r = prompt("Reason for rejection (required):");
+                          if (r !== null) handleStatusUpdate(b.id, 'REJECTED', r);
+                        }}
+                      >
+                        Reject
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="bk-card-times">
@@ -73,53 +150,21 @@ export default function BookingList({ bookings, loading, user, handleCancel, han
                 <span>{fmt(b.endTime)}</span>
               </div>
 
-              {b.purpose && (
-                <p className="bk-card-purpose">
-                  <em>"{b.purpose}"</em>
-                </p>
+              <p className="bk-card-purpose">
+                <em>"{b.purpose}"</em>
+                {b.expectedAttendees && (
+                  <span style={{ marginLeft: '1rem', color: 'var(--primary-color)', fontSize: '0.8rem', fontWeight: '600' }}>
+                    • {b.expectedAttendees} Attendees
+                  </span>
+                )}
+              </p>
+
+              {b.adminReason && (
+                <div className="bk-admin-note" style={{ marginTop: '0.5rem', fontSize: '0.8rem', color: '#666', background: 'rgba(0,0,0,0.03)', padding: '0.5rem', borderRadius: '4px', borderLeft: '3px solid #ccc' }}>
+                  <strong>Admin Note:</strong> {b.adminReason}
+                </div>
               )}
             </div>
-
-            {/* Cancel – only if PENDING and user is NOT admin */}
-            {b.status === 'PENDING' && user?.role !== 'ADMIN' && (
-              <button
-                id={`cancel-booking-${b.id}`}
-                className="bk-cancel-btn"
-                onClick={() => handleCancel(b.id)}
-                disabled={cancellingId === b.id}
-                title="Cancel this booking"
-              >
-                {cancellingId === b.id ? (
-                  <div className="bk-btn-spinner" />
-                ) : (
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="18" y1="6" x2="6" y2="18"/>
-                    <line x1="6" y1="6" x2="18" y2="18"/>
-                  </svg>
-                )}
-              </button>
-            )}
-
-            {/* Admin controls */}
-            {b.status === 'PENDING' && user?.role === 'ADMIN' && (
-              <div style={{ display: 'flex', gap: '8px', padding: '0 1.25rem', alignItems: 'center', flexShrink: 0 }}>
-                <button 
-                  className="btn btn-sm btn-primary" 
-                  onClick={() => handleStatusUpdate(b.id, 'APPROVED')} 
-                  style={{ background: '#10b981', border: 'none' }}
-                >
-                  Approve
-                </button>
-                <button 
-                  className="btn btn-sm btn-outline" 
-                  onClick={() => handleStatusUpdate(b.id, 'REJECTED')} 
-                  style={{ color: '#ef4444', borderColor: '#ef4444' }}
-                >
-                  Reject
-                </button>
-              </div>
-            )}
           </div>
         );
       })}

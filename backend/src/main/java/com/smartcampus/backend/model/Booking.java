@@ -53,6 +53,12 @@ public class Booking {
     /** Brief description of why the resource is being booked. */
     private String purpose;
 
+    /** Estimated number of people attending the event/session. */
+    private Integer expectedAttendees;
+
+    /** Feedback or reason provided by the admin during approval/rejection. */
+    private String adminReason;
+
     /**
      * Current lifecycle status of the booking.
      * Defaults to {@link BookingStatus#PENDING} on creation and

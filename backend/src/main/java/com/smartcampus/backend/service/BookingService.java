@@ -121,16 +121,75 @@ public class BookingService {
      * @return the updated {@link Booking} document
      * @throws ResourceNotFoundException if no booking exists for the given id
      */
-    public Booking updateBookingStatus(String id, BookingStatus newStatus) {
-        log.debug("Updating status of booking '{}' to {}", id, newStatus);
+    public Booking updateBookingStatus(String id, BookingStatus newStatus, String reason) {
+        log.debug("Updating status of booking '{}' to {} with reason: {}", id, newStatus, reason);
 
         Booking booking = bookingRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Booking", "id", id));
 
         booking.setStatus(newStatus);
+        booking.setAdminReason(reason);
         Booking updated = bookingRepository.save(booking);
-        log.info("Booking '{}' status updated to {}", id, newStatus);
+        log.info("Booking '{}' status updated to {} with reason saved", id, newStatus);
         return updated;
+    }
+
+    /**
+     * Updates an existing booking.
+     *
+     * @param id            the MongoDB id of the booking to update
+     * @param updatedBooking the new details for the booking
+     * @param currentUserId the ID of the user trying to update
+     * @return the updated {@link Booking} document
+     * @throws ResourceNotFoundException if no booking exists
+     * @throws com.smartcampus.backend.exception.UnauthorizedException if the user does not own the booking
+     */
+    public Booking updateBooking(String id, Booking updatedBooking, String currentUserId) {
+        log.debug("Updating booking '{}' by user '{}'", id, currentUserId);
+        
+        Booking booking = bookingRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Booking", "id", id));
+                
+        if (!booking.getStudentId().equals(currentUserId)) {
+            throw new com.smartcampus.backend.exception.UnauthorizedException("You do not have permission to edit this booking");
+        }
+        
+        if (booking.getStatus() != BookingStatus.PENDING && booking.getStatus() != BookingStatus.APPROVED) {
+            throw new IllegalArgumentException("Only PENDING or APPROVED bookings can be edited");
+        }
+        
+        booking.setPurpose(updatedBooking.getPurpose());
+        booking.setExpectedAttendees(updatedBooking.getExpectedAttendees());
+        
+        // If time or resource changed, check for conflicts
+        if (!booking.getStartTime().equals(updatedBooking.getStartTime()) || 
+            !booking.getEndTime().equals(updatedBooking.getEndTime()) || 
+            !booking.getResourceId().equals(updatedBooking.getResourceId())) {
+            
+            booking.setStartTime(updatedBooking.getStartTime());
+            booking.setEndTime(updatedBooking.getEndTime());
+            booking.setResourceId(updatedBooking.getResourceId());
+            
+            List<Booking> conflicts = bookingRepository.findOverlappingBookings(
+                    booking.getResourceId(),
+                    booking.getStartTime(),
+                    booking.getEndTime()
+            );
+            // Ignore this booking itself if it overlaps with its old timeslot
+            conflicts.removeIf(b -> b.getId().equals(id));
+            
+            if (!conflicts.isEmpty()) {
+                throw new BookingConflictException("Resource is already booked for this new time: " + booking.getResourceId());
+            }
+        }
+        
+        // Reset status to PENDING if user edited the booking
+        booking.setStatus(BookingStatus.PENDING);
+        booking.setAdminReason(null); // Clear previous admin feedback
+        
+        Booking saved = bookingRepository.save(booking);
+        log.info("Booking '{}' updated successfully by user '{}'", id, currentUserId);
+        return saved;
     }
 
     // -----------------------------------------------------------------------
@@ -141,18 +200,45 @@ public class BookingService {
      * Permanently deletes a booking by its id.
      * Used for the {@code DELETE /api/bookings/{id}} endpoint.
      *
-     * @param id the MongoDB id of the booking to delete
-     * @throws ResourceNotFoundException if no booking exists for the given id
+     * @param id            the MongoDB id of the booking to delete
+     * @param currentUserId the ID of the user trying to delete
+     * @throws ResourceNotFoundException if no booking exists
+     * @throws com.smartcampus.backend.exception.UnauthorizedException if user doesn't own booking
      */
-    public void cancelBooking(String id) {
-        log.debug("Cancelling booking '{}'", id);
+    public void deleteBooking(String id, String currentUserId) {
+        log.debug("Deleting booking '{}' by user '{}'", id, currentUserId);
 
-        // Verify the booking exists before attempting deletion
+        Booking booking = bookingRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Booking", "id", id));
+
+        log.debug("Found booking '{}' with studentId '{}'. Current user is '{}'", id, booking.getStudentId(), currentUserId);
+        
+        if (!booking.getStudentId().equals(currentUserId)) {
+            log.warn("Unauthorized delete attempt: booking owner is '{}', requester is '{}'", booking.getStudentId(), currentUserId);
+            throw new com.smartcampus.backend.exception.UnauthorizedException("You do not have permission to delete this booking");
+        }
+
+        if (booking.getStatus() != BookingStatus.PENDING && booking.getStatus() != BookingStatus.APPROVED) {
+            log.warn("Invalid cancel attempt: booking '{}' status is {}", id, booking.getStatus());
+            throw new IllegalArgumentException("Only PENDING or APPROVED bookings can be cancelled");
+        }
+
+        booking.setStatus(BookingStatus.CANCELLED);
+        bookingRepository.save(booking);
+        log.info("Booking '{}' cancelled successfully", id);
+    }
+
+    /**
+     * Deletes a booking indiscriminately (for admin use).
+     *
+     * @param id the MongoDB id of the booking to delete
+     */
+    public void adminDeleteBooking(String id) {
+        log.debug("Admin is permanently deleting booking '{}'", id);
         if (!bookingRepository.existsById(id)) {
             throw new ResourceNotFoundException("Booking", "id", id);
         }
-
         bookingRepository.deleteById(id);
-        log.info("Booking '{}' cancelled and removed successfully", id);
+        log.info("Admin successfully deleted booking '{}'", id);
     }
 }

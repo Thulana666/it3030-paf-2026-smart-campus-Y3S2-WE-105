@@ -15,6 +15,7 @@ import BookingSystem from './pages/modules/BookingSystem';
 import Facilities from './pages/modules/Facilities';
 import IncidentTickets from './pages/modules/IncidentTickets';
 import UserManagement from './pages/admin/UserManagement';
+import AdminBookingDashboard from './pages/admin/AdminBookingDashboard';
 
 function App() {
   return (
@@ -38,6 +39,7 @@ function App() {
                 <Route path="facilities" element={<Facilities />} />
                 <Route path="incident-tickets" element={<IncidentTickets />} />
                 <Route path="users" element={<ProtectedRoute allowedRoles={['ADMIN']}><UserManagement /></ProtectedRoute>} />
+                <Route path="facility-approvals" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminBookingDashboard /></ProtectedRoute>} />
               </Route>
               
               <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />

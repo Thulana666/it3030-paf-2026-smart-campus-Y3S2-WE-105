@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { createBooking } from '../../../services/bookingService';
+import React, { useState, useEffect } from 'react';
+import { createBooking, updateBooking } from '../../services/bookingService';
 
 const RESOURCES = [
   'Hall A',
@@ -14,24 +14,50 @@ const RESOURCES = [
 
 const toIso = (local) => (local ? new Date(local).toISOString() : '');
 
+// Helper to format ISO date to datetime-local string (YYYY-MM-DDTHH:mm)
+const toLocalInput = (iso) => {
+  if (!iso) return '';
+  const date = new Date(iso);
+  const offset = date.getTimezoneOffset() * 60000;
+  const localDate = new Date(date.getTime() - offset);
+  return localDate.toISOString().slice(0, 16);
+};
+
 const EMPTY_FORM = {
   resourceId: RESOURCES[0],
   startTime:  '',
   endTime:    '',
   purpose:    '',
+  expectedAttendees: '',
 };
 
-export default function BookingForm({ studentId, onSuccess, onClose, showToast }) {
+export default function BookingForm({ studentId, onSuccess, onClose, showToast, editBooking }) {
   const [form, setForm] = useState(EMPTY_FORM);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
   const [conflictMsg, setConflictMsg] = useState('');
+  const [errors, setErrors] = useState({}); // New: Track which fields have errors
+
+  const isEdit = !!editBooking;
+
+  useEffect(() => {
+    if (editBooking) {
+      setForm({
+        resourceId: editBooking.resourceId,
+        startTime:  toLocalInput(editBooking.startTime),
+        endTime:    toLocalInput(editBooking.endTime),
+        purpose:    editBooking.purpose || '',
+        expectedAttendees: editBooking.expectedAttendees || '',
+      });
+    }
+  }, [editBooking]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm(prev => ({ ...prev, [name]: value }));
     setFormError('');
     setConflictMsg('');
+    setErrors(prev => ({ ...prev, [name]: false })); // Clear field error on change
   };
 
   const handleSubmit = async (e) => {
@@ -39,37 +65,70 @@ export default function BookingForm({ studentId, onSuccess, onClose, showToast }
     setFormError('');
     setConflictMsg('');
 
-    if (!form.startTime || !form.endTime) {
-      setFormError('Please select both start and end date/time.');
+    const newErrors = {};
+    if (!form.startTime) newErrors.startTime = true;
+    if (!form.endTime) newErrors.endTime = true;
+    if (!form.purpose.trim()) newErrors.purpose = true;
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      setFormError('Please fill in all required fields.');
       return;
     }
-    if (new Date(form.startTime) >= new Date(form.endTime)) {
+
+    const start = new Date(form.startTime);
+    const end = new Date(form.endTime);
+    const now = new Date();
+    const maxDate = new Date();
+    maxDate.setMonth(now.getMonth() + 6);
+
+    if (start < now && !isEdit) {
+      setErrors({ startTime: true });
+      setFormError('Start time cannot be in the past.');
+      return;
+    }
+
+    if (start >= end) {
+      setErrors({ startTime: true, endTime: true });
       setFormError('End time must be after start time.');
       return;
     }
-    if (!form.purpose.trim()) {
-      setFormError('Please describe the purpose of your booking.');
+
+    if (start > maxDate) {
+      setErrors({ startTime: true });
+      setFormError('Bookings can only be made up to 6 months in advance.');
       return;
     }
 
     try {
       setSubmitting(true);
-      await createBooking({
+      const payload = {
         resourceId: form.resourceId,
         studentId,
         startTime:  toIso(form.startTime),
         endTime:    toIso(form.endTime),
         purpose:    form.purpose.trim(),
-      });
-      showToast('Booking submitted! Awaiting approval.');
+        expectedAttendees: form.expectedAttendees ? parseInt(form.expectedAttendees) : null,
+      };
+
+      if (isEdit) {
+        await updateBooking(editBooking.id, payload, studentId);
+        showToast('Booking updated successfully!');
+      } else {
+        await createBooking(payload);
+        showToast('Booking submitted! Awaiting approval.');
+      }
+      
       onSuccess(); // refresh list and close modal
     } catch (err) {
+      console.error("Booking error details:", err);
       if (err?.response?.status === 409) {
         setConflictMsg(
           `⚠️ Time slot conflict! "${form.resourceId}" is already booked between the selected times. Please choose a different time or resource.`
         );
       } else {
-        setFormError(err?.response?.data?.message || 'Failed to submit booking. Please try again.');
+        const msg = err?.response?.data?.message || err?.message || `Failed to ${isEdit ? 'update' : 'submit'} booking. Please try again.`;
+        setFormError(msg);
       }
     } finally {
       setSubmitting(false);
@@ -80,7 +139,7 @@ export default function BookingForm({ studentId, onSuccess, onClose, showToast }
     <div className="bk-modal-overlay" onClick={onClose}>
       <div id="new-booking-modal" className="bk-modal glass" onClick={e => e.stopPropagation()}>
         <div className="bk-modal-header">
-          <h2>New Booking Request</h2>
+          <h2>{isEdit ? 'Edit Booking Request' : 'New Booking Request'}</h2>
           <button className="bk-modal-close" onClick={onClose} title="Close">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
               stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -117,6 +176,19 @@ export default function BookingForm({ studentId, onSuccess, onClose, showToast }
             </select>
           </div>
 
+          <div className="form-group">
+            <label htmlFor="bk-attendees">Expected Attendees (optional)</label>
+            <input
+              id="bk-attendees"
+              type="number"
+              name="expectedAttendees"
+              value={form.expectedAttendees}
+              onChange={handleChange}
+              placeholder="e.g. 50"
+              min="1"
+            />
+          </div>
+
           <div className="bk-form-row">
             <div className="form-group">
               <label htmlFor="bk-start">Start Date &amp; Time</label>
@@ -128,6 +200,7 @@ export default function BookingForm({ studentId, onSuccess, onClose, showToast }
                 onChange={handleChange}
                 required
                 min={new Date().toISOString().slice(0, 16)}
+                style={{ borderColor: errors.startTime ? '#ef4444' : '' }}
               />
             </div>
             <div className="form-group">
@@ -140,6 +213,7 @@ export default function BookingForm({ studentId, onSuccess, onClose, showToast }
                 onChange={handleChange}
                 required
                 min={form.startTime || new Date().toISOString().slice(0, 16)}
+                style={{ borderColor: errors.endTime ? '#ef4444' : '' }}
               />
             </div>
           </div>
@@ -161,6 +235,7 @@ export default function BookingForm({ studentId, onSuccess, onClose, showToast }
                 background: 'rgba(255,255,255,0.8)',
                 fontSize: '1rem', resize: 'vertical', outline: 'none',
                 fontFamily: 'inherit', transition: 'all 0.2s ease',
+                borderColor: errors.purpose ? '#ef4444' : '',
               }}
             />
           </div>
@@ -172,9 +247,9 @@ export default function BookingForm({ studentId, onSuccess, onClose, showToast }
             <button id="submit-booking-btn" type="submit" className="btn btn-primary" disabled={submitting}>
               {submitting ? (
                 <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <div className="bk-btn-spinner" /> Submitting...
+                  <div className="bk-btn-spinner" /> {isEdit ? 'Updating...' : 'Submitting...'}
                 </span>
-              ) : 'Submit Booking'}
+              ) : (isEdit ? 'Update Booking' : 'Submit Booking')}
             </button>
           </div>
         </form>

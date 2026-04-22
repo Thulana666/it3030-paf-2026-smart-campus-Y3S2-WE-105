@@ -113,8 +113,25 @@ public class BookingController {
     @PutMapping("/{id}/status")
     public ResponseEntity<Booking> updateBookingStatus(
             @PathVariable String id,
-            @RequestParam BookingStatus status) {
-        Booking updated = bookingService.updateBookingStatus(id, status);
+            @RequestParam BookingStatus status,
+            @RequestParam(required = false) String reason) {
+        Booking updated = bookingService.updateBookingStatus(id, status, reason);
+        return ResponseEntity.ok(updated);
+    }
+
+    // -----------------------------------------------------------------------
+    // PUT /api/bookings/{id}
+    // -----------------------------------------------------------------------
+
+    /**
+     * Updates an existing booking.
+     */
+    @PutMapping("/{id}")
+    public ResponseEntity<Booking> updateBooking(
+            @PathVariable String id,
+            @RequestBody Booking updatedBooking,
+            @RequestHeader("studentId") String currentUserId) {
+        Booking updated = bookingService.updateBooking(id, updatedBooking, currentUserId);
         return ResponseEntity.ok(updated);
     }
 
@@ -129,11 +146,27 @@ public class BookingController {
      * {@code 404 Not Found} if the booking id does not exist.</p>
      *
      * @param id the MongoDB id of the booking to delete
+     * @param currentUserId the extracted studentId from headers
      * @return empty 204 response
      */
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> cancelBooking(@PathVariable String id) {
-        bookingService.cancelBooking(id);
+    public ResponseEntity<Void> deleteBooking(
+            @PathVariable String id,
+            @RequestHeader("studentId") String currentUserId) {
+        bookingService.deleteBooking(id, currentUserId);
+        return ResponseEntity.noContent().build();
+    }
+
+    // -----------------------------------------------------------------------
+    // DELETE /api/bookings/admin/{id} (Admin specific)
+    // -----------------------------------------------------------------------
+
+    /**
+     * Admin shortcut to forcefully delete any booking.
+     */
+    @DeleteMapping("/admin/{id}")
+    public ResponseEntity<Void> adminDeleteBooking(@PathVariable String id) {
+        bookingService.adminDeleteBooking(id);
         return ResponseEntity.noContent().build();
     }
 }

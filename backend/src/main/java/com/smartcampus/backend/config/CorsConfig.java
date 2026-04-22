@@ -23,10 +23,7 @@ public class CorsConfig {
         CorsConfiguration config = new CorsConfiguration();
 
         // ── Allowed origins ────────────────────────────────────────────────
-        config.setAllowedOrigins(List.of(
-                "http://localhost:5173",   // Vite dev server
-                "http://localhost:3000"    // fallback / CRA
-        ));
+        config.setAllowedOriginPatterns(List.of("*"));
 
         // ── Allowed methods ────────────────────────────────────────────────
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));

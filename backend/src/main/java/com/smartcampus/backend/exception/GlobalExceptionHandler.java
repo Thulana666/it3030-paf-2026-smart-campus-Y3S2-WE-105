@@ -105,6 +105,15 @@ public class GlobalExceptionHandler {
     }
 
     // -------------------------------------------------------
+    // 403 — Unauthorized Action
+    // -------------------------------------------------------
+    @ExceptionHandler(UnauthorizedException.class)
+    public ResponseEntity<ErrorResponse> handleUnauthorizedAction(UnauthorizedException ex) {
+        log.warn("Access Denied: {}", ex.getMessage());
+        return buildError(HttpStatus.FORBIDDEN, ex.getMessage());
+    }
+
+    // -------------------------------------------------------
     // Helper
     // -------------------------------------------------------
 

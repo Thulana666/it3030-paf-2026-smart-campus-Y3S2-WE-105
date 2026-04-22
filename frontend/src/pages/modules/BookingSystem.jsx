@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState, useCallback } from 'react';
+import React, { useContext, useEffect, useState, useCallback, useMemo } from 'react';
 import { AuthContext } from '../../context/AuthContext';
 import {
   getBookingsByUser,
@@ -15,8 +15,11 @@ export default function BookingSystem() {
   const [bookings,    setBookings]    = useState([]);
   const [loading,     setLoading]     = useState(true);
   const [showModal,   setShowModal]   = useState(false);
+  const [editingBooking, setEditingBooking] = useState(null);
   const [cancellingId, setCancellingId] = useState(null);
   const [toast,       setToast]       = useState(null);
+  const [searchTerm,  setSearchTerm]  = useState('');
+  const [statusFilter, setStatusFilter] = useState('ALL');
 
   const studentId = user?.id || user?.email || '';
 
@@ -48,13 +51,26 @@ export default function BookingSystem() {
     pending:  bookings.filter(b => b.status === 'PENDING').length,
     approved: bookings.filter(b => b.status === 'APPROVED').length,
     rejected: bookings.filter(b => b.status === 'REJECTED').length,
+    cancelled:bookings.filter(b => b.status === 'CANCELLED').length,
   };
+
+  const filteredBookings = useMemo(() => {
+    return bookings.filter(b => {
+      const matchesSearch = 
+        b.resourceId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (b.purpose && b.purpose.toLowerCase().includes(searchTerm.toLowerCase()));
+      
+      const matchesStatus = statusFilter === 'ALL' || b.status === statusFilter;
+      
+      return matchesSearch && matchesStatus;
+    });
+  }, [bookings, searchTerm, statusFilter]);
 
   const handleCancel = async (id) => {
     if (!window.confirm('Are you sure you want to cancel this booking?')) return;
     try {
       setCancellingId(id);
-      await cancelBooking(id);
+      await cancelBooking(id, studentId);
       showToast('Booking cancelled.', 'info');
       setBookings(prev => prev.filter(b => b.id !== id));
     } catch (err) {
@@ -64,9 +80,9 @@ export default function BookingSystem() {
     }
   };
 
-  const handleStatusUpdate = async (id, status) => {
+  const handleStatusUpdate = async (id, status, reason = '') => {
     try {
-      await updateBookingStatus(id, status);
+      await updateBookingStatus(id, status, reason);
       showToast(`Booking ${status.toLowerCase()}!`, 'success');
       await fetchBookings();
     } catch (err) {
@@ -74,8 +90,20 @@ export default function BookingSystem() {
     }
   };
 
-  const openModal  = () => setShowModal(true);
-  const closeModal = () => setShowModal(false);
+  const handleEdit = (booking) => {
+    setEditingBooking(booking);
+    setShowModal(true);
+  };
+
+  const openModal  = () => {
+    setEditingBooking(null);
+    setShowModal(true);
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    setEditingBooking(null);
+  };
 
   return (
     <div className="page-container" style={{ animationName: 'slideUp', animationDuration: '0.4s', animationFillMode: 'both' }}>
@@ -108,26 +136,59 @@ export default function BookingSystem() {
       {/* ── Stats Row ── */}
       <div className="bk-stats-row">
         {[
-          { label: 'Total Bookings', value: stats.total,    color: '#4f46e5', icon: '📋' },
+          { label: 'Total Bookings', value: stats.total,    color: '#6366f1', icon: '📁' },
           { label: 'Pending',        value: stats.pending,  color: '#f59e0b', icon: '⏳' },
           { label: 'Approved',       value: stats.approved, color: '#10b981', icon: '✅' },
-          { label: 'Rejected',       value: stats.rejected, color: '#ef4444', icon: '❌' },
+          { label: 'Rejected',       value: stats.rejected, color: '#ef4444', icon: '⚠️' },
+          { label: 'Cancelled',      value: stats.cancelled,color: '#94a3b8', icon: '🚫' },
         ].map(s => (
           <div key={s.label} className="bk-stat-card glass">
             <div className="bk-stat-icon">{s.icon}</div>
-            <div className="bk-stat-value" style={{ color: s.color }}>{s.value}</div>
-            <div className="bk-stat-label">{s.label}</div>
+            <div className="bk-stat-info">
+              <div className="bk-stat-value" style={{ color: s.color }}>{s.value}</div>
+              <div className="bk-stat-label">{s.label}</div>
+            </div>
           </div>
         ))}
       </div>
 
+      {/* ── Filter Bar ── */}
+      <div className="bk-filter-bar glass">
+        <div className="bk-search-wrapper">
+          <svg className="bk-search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <input 
+            type="text" 
+            placeholder="Search by resource or purpose..." 
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="bk-search-input"
+          />
+        </div>
+        
+        <select 
+          className="bk-filter-dropdown"
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+        >
+          <option value="ALL">All Statuses</option>
+          <option value="PENDING">Pending</option>
+          <option value="APPROVED">Approved</option>
+          <option value="REJECTED">Rejected</option>
+          <option value="CANCELLED">Cancelled</option>
+        </select>
+      </div>
+
       {/* ── Bookings List Component ── */}
       <BookingList 
-        bookings={bookings} 
+        bookings={filteredBookings} 
         loading={loading} 
         user={user} 
+        currentUserId={studentId}
         handleCancel={handleCancel} 
         handleStatusUpdate={handleStatusUpdate} 
+        handleEdit={handleEdit}
         cancellingId={cancellingId} 
         openModal={openModal}
       />
@@ -136,6 +197,7 @@ export default function BookingSystem() {
       {showModal && (
         <BookingForm 
           studentId={studentId} 
+          editBooking={editingBooking}
           onSuccess={() => { closeModal(); fetchBookings(); }} 
           onClose={closeModal} 
           showToast={showToast} 
