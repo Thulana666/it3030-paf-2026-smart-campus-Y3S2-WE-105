@@ -17,6 +17,7 @@ import IncidentTickets from './pages/modules/IncidentTickets';
 import UserManagement from './pages/admin/UserManagement';
 import TicketCreate from './pages/modules/tickets/TicketCreate';
 import TicketDetail from './pages/modules/tickets/TicketDetail';
+import TicketEdit   from './pages/modules/tickets/TicketEdit';
 
 function App() {
   return (
@@ -39,8 +40,9 @@ function App() {
                 <Route path="bookings" element={<BookingSystem />} />
                 <Route path="facilities" element={<Facilities />} />
                 <Route path="incident-tickets" element={<IncidentTickets />} />
-                <Route path="tickets/create" element={<TicketCreate />} />
-                <Route path="tickets/:id" element={<TicketDetail />} />
+                <Route path="tickets/create"    element={<TicketCreate />} />
+                <Route path="tickets/:id"       element={<TicketDetail />} />
+                <Route path="tickets/:id/edit"  element={<TicketEdit />} />
                 <Route path="users" element={<ProtectedRoute allowedRoles={['ADMIN']}><UserManagement /></ProtectedRoute>} />
               </Route>
               
