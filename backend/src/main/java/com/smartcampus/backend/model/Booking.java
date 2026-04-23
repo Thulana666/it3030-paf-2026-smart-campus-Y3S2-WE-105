@@ -32,38 +32,28 @@ public class Booking {
     @Id
     private String id;
 
-    /**
-     * Identifier of the campus resource being booked
-     * (e.g., "Hall A", "Lab 1", "Meeting Room 3").
-     */
+    /** Identifier of the campus resource being booked (e.g., "Hall A", "Lab 1"). */
     private String resourceId;
 
-    /**
-     * Student / user ID of the person making the booking.
-     * Typically the authenticated user's ID from the {@code users} collection.
-     */
+    /** ID or email of the student making the reservation. */
     private String studentId;
 
-    /** Inclusive start of the requested reservation window. */
+    /** Start timestamp of the booking window. */
     private LocalDateTime startTime;
 
-    /** Inclusive end of the requested reservation window. */
+    /** End timestamp of the booking window. */
     private LocalDateTime endTime;
 
-    /** Brief description of why the resource is being booked. */
+    /** Detailed purpose or description for the reservation. */
     private String purpose;
 
-    /** Estimated number of people attending the event/session. */
+    /** Estimated number of attendees for the session. */
     private Integer expectedAttendees;
 
-    /** Feedback or reason provided by the admin during approval/rejection. */
+    /** Justification or feedback provided by the administrator. */
     private String adminReason;
 
-    /**
-     * Current lifecycle status of the booking.
-     * Defaults to {@link BookingStatus#PENDING} on creation and
-     * can be updated to {@code APPROVED} or {@code REJECTED} by staff.
-     */
+    /** Current lifecycle status (PENDING, APPROVED, REJECTED, CANCELLED). */
     @Builder.Default
     private BookingStatus status = BookingStatus.PENDING;
 }
