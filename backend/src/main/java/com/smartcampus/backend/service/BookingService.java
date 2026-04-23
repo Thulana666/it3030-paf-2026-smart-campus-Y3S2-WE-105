@@ -140,7 +140,8 @@ public class BookingService {
         booking.setStatus(newStatus);
         booking.setAdminReason(reason);
         Booking updated = bookingRepository.save(booking);
-        log.info("Booking '{}' status updated to {} with reason saved", id, newStatus);
+        log.info("Booking lifecycle update: ID {} transitioned to status {} | Admin reason logged: {}", 
+                id, newStatus, (reason != null && !reason.isEmpty()));
 
         // ── Auto-reject overlapping pending bookings if APPROVED ──────────
         if (newStatus == BookingStatus.APPROVED) {
