@@ -35,8 +35,8 @@ export default function BookingList({
   currentUserId,
   resources = [] 
 }) {
-  // Optimization: Map resources by ID for O(1) lookup during list rendering
-  const resourceMap = resources.reduce((acc, r) => {
+  // Optimization: Cache resources by ID for O(1) lookup during list rendering
+  const resourceCache = resources.reduce((acc, r) => {
     acc[r.id] = r;
     return acc;
   }, {});
@@ -65,7 +65,7 @@ export default function BookingList({
     <div className="bk-list" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.25rem', width: '100%', maxWidth: 'none' }}>
       {bookings.map(b => {
         const meta = STATUS_META[b.status] || STATUS_META.PENDING;
-        const resource = resourceMap[b.resourceId];
+        const resource = resourceCache[b.resourceId];
         
         return (
           <div key={b.id} className="bk-card glass" style={{ 
