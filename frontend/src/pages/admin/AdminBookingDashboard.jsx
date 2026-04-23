@@ -24,6 +24,7 @@ export default function AdminBookingDashboard() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [resources, setResources] = useState([]);
+  const [selectedNote, setSelectedNote] = useState(null);
 
   const fetchBookings = async () => {
     setLoading(true);
@@ -245,25 +246,34 @@ export default function AdminBookingDashboard() {
                               👥 {b.expectedAttendees} Attendees
                             </span>
                           )}
-                          {b.adminReason && (
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#f1f5f9', color: '#475569', padding: '2px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: '600' }}>
-                              📝 Note attached
-                            </span>
-                          )}
+
                         </div>
                       </td>
 
-                      {/* Status */}
                       <td style={{ padding: '1rem 1rem', textAlign: 'center' }}>
-                        <span style={{ 
-                          display: 'inline-flex', alignItems: 'center', gap: '6px',
-                          padding: '0.35rem 0.85rem', borderRadius: '9999px', fontSize: '0.65rem', fontWeight: '800',
-                          color: meta.color, background: meta.bg, textTransform: 'uppercase', letterSpacing: '0.05em',
-                          border: `1px solid ${meta.color}22`
-                        }}>
-                          <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: meta.color }}></div>
-                          {meta.label}
-                        </span>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ 
+                            display: 'inline-flex', alignItems: 'center', gap: '6px',
+                            padding: '0.35rem 0.85rem', borderRadius: '9999px', fontSize: '0.65rem', fontWeight: '800',
+                            color: meta.color, background: meta.bg, textTransform: 'uppercase', letterSpacing: '0.05em',
+                            border: `1px solid ${meta.color}22`
+                          }}>
+                            <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: meta.color }}></div>
+                            {meta.label}
+                          </span>
+                          {b.adminReason && (
+                            <button 
+                              onClick={() => setSelectedNote(b.adminReason)}
+                              className="note-view-pill"
+                              title="View admin note"
+                            >
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                              </svg>
+                              View Note
+                            </button>
+                          )}
+                        </div>
                       </td>
 
                       {/* Actions */}
@@ -301,9 +311,12 @@ export default function AdminBookingDashboard() {
                               Revoke
                             </button>
                           ) : (
-                            <span style={{ color: '#94a3b8', fontSize: '0.85rem', fontWeight: '500' }}>
+                            <div className="processed-badge">
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                <polyline points="20 6 9 17 4 12"></polyline>
+                              </svg>
                               Processed
-                            </span>
+                            </div>
                           )}
                         </div>
                       </td>
@@ -315,6 +328,33 @@ export default function AdminBookingDashboard() {
           </table>
         </div>
       </div>
+
+      {/* ── Admin Note Modal ── */}
+      {selectedNote && (
+        <div className="bk-modal-overlay" onClick={() => setSelectedNote(null)}>
+          <div className="bk-modal glass" onClick={e => e.stopPropagation()} style={{ maxWidth: '450px' }}>
+            <div className="bk-modal-header">
+              <h2 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ color: 'var(--general-color)' }}>📝</span>
+                Admin Feedback
+              </h2>
+              <button className="bk-modal-close" onClick={() => setSelectedNote(null)}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              </button>
+            </div>
+            
+            <div className="bk-note-content-area">
+              {selectedNote}
+            </div>
+
+            <div className="bk-modal-footer">
+              <button className="modal-footer-btn" onClick={() => setSelectedNote(null)}>
+                Close Note
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
