@@ -1,7 +1,9 @@
 import axios from 'axios';
 
+const apiBaseURL = process.env.REACT_APP_API_BASE || 'http://localhost:8080';
+
 const api = axios.create({
-  baseURL: 'http://localhost:8080/api',
+  baseURL: `${apiBaseURL}/api`,
 });
 
 // Request interceptor to attach JWT token
