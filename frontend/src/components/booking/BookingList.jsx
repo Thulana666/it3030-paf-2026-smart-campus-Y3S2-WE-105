@@ -141,28 +141,14 @@ export default function BookingList({
 
             {/* Admin Feedback Section */}
             {(b.status === 'APPROVED' || b.status === 'REJECTED' || b.adminReason) && (
-              <div style={{ 
-                marginTop: 'auto',
-                padding: '0.75rem 1rem', 
+              <div className="bk-feedback-container" style={{ 
                 background: b.status === 'REJECTED' ? 'rgba(239, 68, 68, 0.05)' : 'rgba(16, 185, 129, 0.05)',
-                borderRadius: '12px', 
                 borderLeft: `4px solid ${meta.color}`,
-                marginBottom: '1rem',
                 border: `1px solid ${meta.color}22`,
-                position: 'relative',
-                overflow: 'hidden'
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                  <span style={{ fontSize: '1rem' }}>💬</span>
-                  <span style={{ 
-                    fontSize: '0.65rem', 
-                    fontWeight: '800', 
-                    textTransform: 'uppercase', 
-                    letterSpacing: '0.05em',
-                    color: meta.color 
-                  }}>
-                    Admin Feedback
-                  </span>
+                <div className="bk-feedback-label" style={{ color: meta.color }}>
+                  <span>💬</span>
+                  Admin Feedback
                 </div>
                 <p style={{ 
                   fontSize: '0.825rem', 
