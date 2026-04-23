@@ -30,7 +30,34 @@ public class TicketService {
     private final NotificationService notificationService;
     private final FileStorageService fileStorageService;
 
-    // --- USER METHODS ---
+    // ─── Helpers ─────────────────────────────────────────────────────────────
+
+    /** Build a TicketResponse enriched with display names. */
+    private TicketResponse enrichTicket(Ticket ticket) {
+        TicketResponse response = TicketResponse.from(ticket);
+
+        if (ticket.getCreatedBy() != null) {
+            userRepository.findById(ticket.getCreatedBy()).ifPresent(u ->
+                    response.setCreatedByName(u.getName() != null ? u.getName() : u.getEmail()));
+        }
+        if (ticket.getAssignedTo() != null) {
+            userRepository.findById(ticket.getAssignedTo()).ifPresent(u ->
+                    response.setAssignedToName(u.getName() != null ? u.getName() : u.getEmail()));
+        }
+        return response;
+    }
+
+    /** Build a CommentResponse enriched with author name and role. */
+    private CommentResponse enrichComment(TicketComment comment) {
+        CommentResponse response = CommentResponse.from(comment);
+        userRepository.findById(comment.getAuthorId()).ifPresent(u -> {
+            response.setAuthorName(u.getName() != null ? u.getName() : u.getEmail());
+            response.setAuthorRole(u.getRole() != null ? u.getRole().name() : "USER");
+        });
+        return response;
+    }
+
+    // ─── USER METHODS ─────────────────────────────────────────────────────────
 
     public TicketResponse createTicket(TicketCreateRequest request, List<MultipartFile> images, String userId) {
         List<String> imagePaths = new ArrayList<>();
@@ -71,13 +98,13 @@ public class TicketService {
             );
         }
 
-        return TicketResponse.from(savedTicket);
+        return enrichTicket(savedTicket);
     }
 
     public List<TicketResponse> getMyTickets(String userId) {
         return ticketRepository.findByCreatedByOrderByCreatedAtDesc(userId)
                 .stream()
-                .map(TicketResponse::from)
+                .map(this::enrichTicket)
                 .collect(Collectors.toList());
     }
 
@@ -99,7 +126,7 @@ public class TicketService {
         ticket.setResourceId(request.getResourceId());
         ticket.setUpdatedAt(LocalDateTime.now());
 
-        return TicketResponse.from(ticketRepository.save(ticket));
+        return enrichTicket(ticketRepository.save(ticket));
     }
 
     public void deleteTicket(String ticketId, String userId) {
@@ -143,7 +170,7 @@ public class TicketService {
             );
         }
 
-        return CommentResponse.from(savedComment);
+        return enrichComment(savedComment);
     }
 
     public void deleteComment(String ticketId, String commentId, String userId) {
@@ -160,26 +187,26 @@ public class TicketService {
 
         commentRepository.delete(comment);
     }
-    
+
     public List<CommentResponse> getComments(String ticketId) {
         return commentRepository.findByTicketIdOrderByCreatedAtAsc(ticketId)
                 .stream()
-                .map(CommentResponse::from)
+                .map(this::enrichComment)
                 .collect(Collectors.toList());
     }
 
-    // --- ADMIN METHODS ---
+    // ─── ADMIN METHODS ────────────────────────────────────────────────────────
 
     public List<TicketResponse> getAllTickets() {
         return ticketRepository.findAll()
                 .stream()
-                .map(TicketResponse::from)
+                .map(this::enrichTicket)
                 .collect(Collectors.toList());
     }
 
     public TicketResponse assignTechnician(String ticketId, String technicianId) {
         Ticket ticket = getTicketById(ticketId);
-        
+
         // Verify technician exists and has role
         User technician = userRepository.findById(technicianId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", technicianId));
@@ -208,7 +235,7 @@ public class TicketService {
                 NotificationType.TICKET
         );
 
-        return TicketResponse.from(saved);
+        return enrichTicket(saved);
     }
 
     public TicketResponse rejectTicket(String ticketId, String rejectionReason) {
@@ -226,21 +253,26 @@ public class TicketService {
                 NotificationType.TICKET
         );
 
-        return TicketResponse.from(saved);
+        return enrichTicket(saved);
     }
 
-    // --- TECHNICIAN METHODS ---
+    // ─── TECHNICIAN METHODS ───────────────────────────────────────────────────
 
     public List<TicketResponse> getAssignedTickets(String technicianId) {
-        return ticketRepository.findByAssignedToOrderByCreatedAtDesc(technicianId)
-                .stream()
-                .map(TicketResponse::from)
+        List<Ticket> assigned = ticketRepository.findByAssignedToOrderByCreatedAtDesc(technicianId);
+        List<Ticket> unassigned = ticketRepository.findByStatusAndAssignedToIsNullOrderByCreatedAtDesc(TicketStatus.OPEN);
+
+        List<Ticket> allTickets = new ArrayList<>(assigned);
+        allTickets.addAll(unassigned);
+
+        return allTickets.stream()
+                .map(this::enrichTicket)
                 .collect(Collectors.toList());
     }
 
     public TicketResponse resolveTicket(String ticketId, String resolutionNotes, String technicianId) {
         Ticket ticket = getTicketById(ticketId);
-        
+
         if (!technicianId.equals(ticket.getAssignedTo())) {
             throw new org.springframework.security.access.AccessDeniedException("You are not assigned to this ticket");
         }
@@ -254,17 +286,77 @@ public class TicketService {
         // Notify User
         notificationService.createNotification(
                 ticket.getCreatedBy(),
-                "Your ticket has been RESOLVED.",
+                "Your ticket has been RESOLVED: " + ticket.getTitle(),
                 NotificationType.TICKET
         );
 
-        return TicketResponse.from(saved);
+        return enrichTicket(saved);
     }
 
-    // --- UTILS ---
+    public TicketResponse updateTicketStatus(String ticketId, String newStatus, String resolutionNotes, String technicianId) {
+        Ticket ticket = getTicketById(ticketId);
+
+        if (!technicianId.equals(ticket.getAssignedTo())) {
+            throw new org.springframework.security.access.AccessDeniedException("You are not assigned to this ticket");
+        }
+
+        TicketStatus status = TicketStatus.valueOf(newStatus);
+        ticket.setStatus(status);
+        if (resolutionNotes != null && !resolutionNotes.isBlank()) {
+            ticket.setResolutionNotes(resolutionNotes);
+        }
+        ticket.setUpdatedAt(LocalDateTime.now());
+
+        Ticket saved = ticketRepository.save(ticket);
+
+        // Notify student when status changes meaningfully
+        String statusMsg = switch (status) {
+            case IN_PROGRESS -> "Your ticket is now IN PROGRESS: " + ticket.getTitle();
+            case RESOLVED    -> "Your ticket has been RESOLVED: " + ticket.getTitle();
+            case CLOSED      -> "Your ticket has been CLOSED as solved: " + ticket.getTitle();
+            default          -> null;
+        };
+        if (statusMsg != null) {
+            notificationService.createNotification(ticket.getCreatedBy(), statusMsg, NotificationType.TICKET);
+        }
+
+        return enrichTicket(saved);
+    }
+
+    public TicketResponse closeTicket(String ticketId, String resolutionNotes, String technicianId) {
+        Ticket ticket = getTicketById(ticketId);
+
+        if (!technicianId.equals(ticket.getAssignedTo())) {
+            throw new org.springframework.security.access.AccessDeniedException("You are not assigned to this ticket");
+        }
+
+        ticket.setStatus(TicketStatus.CLOSED);
+        if (resolutionNotes != null && !resolutionNotes.isBlank()) {
+            ticket.setResolutionNotes(resolutionNotes);
+        }
+        ticket.setUpdatedAt(LocalDateTime.now());
+
+        Ticket saved = ticketRepository.save(ticket);
+
+        // Notify student
+        notificationService.createNotification(
+                ticket.getCreatedBy(),
+                "✅ Your ticket has been CLOSED as solved: " + ticket.getTitle(),
+                NotificationType.TICKET
+        );
+
+        return enrichTicket(saved);
+    }
+
+    // ─── UTILS ───────────────────────────────────────────────────────────────
 
     public Ticket getTicketById(String ticketId) {
         return ticketRepository.findById(ticketId)
                 .orElseThrow(() -> new ResourceNotFoundException("Ticket", "id", ticketId));
     }
+
+    public TicketResponse enrichedTicketById(String ticketId) {
+        return enrichTicket(getTicketById(ticketId));
+    }
 }
+
