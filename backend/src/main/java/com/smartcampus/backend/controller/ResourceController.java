@@ -74,7 +74,6 @@ public class ResourceController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> createResource(@RequestBody CreateResourceRequest request) {
         try {
-            // Validate required fields
             if (request.getResourceCode() == null || request.getResourceCode().isEmpty()) {
                 return ResponseEntity.badRequest().body(Map.of("error", "Resource code is required"));
             }
@@ -84,7 +83,6 @@ public class ResourceController {
             if (request.getCapacity() == null || request.getCapacity() <= 0) {
                 return ResponseEntity.badRequest().body(Map.of("error", "Capacity must be greater than 0"));
             }
-
             Resource created = resourceService.createResource(request);
             return ResponseEntity.status(HttpStatus.CREATED).body(created);
         } catch (IllegalArgumentException e) {
@@ -164,4 +162,3 @@ public class ResourceController {
         }
     }
 }
-

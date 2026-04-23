@@ -1,5 +1,6 @@
 import api from './api';
 
+<<<<<<< HEAD
 const RESOURCE_BASE_URL = '/resources';
 const ADMIN_URL = '/resources/admin';
 
@@ -82,3 +83,9 @@ export const hardDeleteResource = async (id) => {
   const response = await api.delete(`${ADMIN_URL}/${id}/permanent`);
   return response.data;
 };
+
+// Named export alias for backward compatibility with ashen imports
+export const resourceService = {
+  getAllResources,
+};
+

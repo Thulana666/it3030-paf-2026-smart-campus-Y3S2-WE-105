@@ -1,6 +1,4 @@
 package com.smartcampus.backend.config;
-import com.smartcampus.backend.security.JwtAuthFilter;
-import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -14,6 +12,10 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
+import com.smartcampus.backend.security.JwtAuthFilter;
+
+import lombok.RequiredArgsConstructor;
 
 /**
  * Spring Security configuration:
@@ -73,6 +75,9 @@ public class SecurityConfig {
 
                 // Other Auth endpoints are fully public
                 .requestMatchers("/api/auth/**").permitAll()
+
+                // Resources endpoint is public (used by schedule page)
+                .requestMatchers("/api/resources").permitAll()
 
                 // Notification endpoints require any authenticated user
                 .requestMatchers("/api/notifications/**").authenticated()
