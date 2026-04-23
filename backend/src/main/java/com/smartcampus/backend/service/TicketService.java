@@ -88,14 +88,16 @@ public class TicketService {
 
         Ticket savedTicket = ticketRepository.save(ticket);
 
-        // Notify Admins
-        List<User> admins = userRepository.findByRole(Role.ADMIN);
-        for (User admin : admins) {
-            notificationService.createNotification(
-                    admin.getId(),
-                    "New ticket created: " + ticket.getTitle(),
-                    NotificationType.TICKET
-            );
+        // Notify Admins & Technicians
+        for (Role r : List.of(Role.ADMIN, Role.TECHNICIAN)) {
+            List<User> list = userRepository.findByRole(r);
+            for (User u : list) {
+                notificationService.createNotification(
+                        u.getId(),
+                        (r == Role.TECHNICIAN ? "New maintenance ticket: " : "New ticket created: ") + ticket.getTitle(),
+                        NotificationType.TICKET
+                );
+            }
         }
 
         return enrichTicket(savedTicket);
@@ -154,20 +156,41 @@ public class TicketService {
 
         TicketComment savedComment = commentRepository.save(comment);
 
-        // Notify relevant parties
-        if (!userId.equals(ticket.getCreatedBy())) {
+        // Determine if the comment author is a technician
+        boolean isAuthorTech = userRepository.findById(userId)
+                .map(u -> u.getRole() == Role.TECHNICIAN).orElse(false);
+                
+        boolean isCreator = userId.equals(ticket.getCreatedBy());
+
+        // Notify creator if someone else (like a Technician) comments
+        if (!isCreator) {
+            String prefix = isAuthorTech ? "Technician replied to your ticket: " : "New comment on your ticket: ";
             notificationService.createNotification(
                     ticket.getCreatedBy(),
-                    "New comment on your ticket: " + ticket.getTitle(),
+                    prefix + ticket.getTitle(),
                     NotificationType.TICKET
             );
         }
-        if (ticket.getAssignedTo() != null && !userId.equals(ticket.getAssignedTo())) {
-            notificationService.createNotification(
-                    ticket.getAssignedTo(),
-                    "New comment on assigned ticket: " + ticket.getTitle(),
-                    NotificationType.TICKET
-            );
+
+        // Notify technician if assigned
+        if (ticket.getAssignedTo() != null) {
+            if (!userId.equals(ticket.getAssignedTo())) {
+                notificationService.createNotification(
+                        ticket.getAssignedTo(),
+                        "New comment on assigned ticket: " + ticket.getTitle(),
+                        NotificationType.TICKET
+                );
+            }
+        } else if (isCreator) {
+            // Ticket is unassigned and user just commented -> notify all Technicians
+            List<User> techs = userRepository.findByRole(Role.TECHNICIAN);
+            for (User tech : techs) {
+                notificationService.createNotification(
+                        tech.getId(),
+                        "User replied to unassigned ticket: " + ticket.getTitle(),
+                        NotificationType.TICKET
+                );
+            }
         }
 
         return enrichComment(savedComment);
