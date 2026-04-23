@@ -43,6 +43,7 @@ const TechnicianTicketPanel = ({
   const [commentsLoading, setCommentsLoading] = useState(true);
   const [newMessage, setNewMessage] = useState("");
   const [sendingMsg, setSendingMsg] = useState(false);
+  const [attachmentUrls, setAttachmentUrls] = useState({});
 
   // Status management
   const [selectedStatus, setSelectedStatus] = useState(
@@ -68,6 +69,47 @@ const TechnicianTicketPanel = ({
     if (!ticket) return;
     loadComments();
   }, [ticket?.id]);
+
+  useEffect(() => {
+    let isMounted = true;
+    const generatedUrls = [];
+
+    const loadAttachmentUrls = async () => {
+      if (!ticket?.imagePaths?.length) {
+        setAttachmentUrls({});
+        return;
+      }
+
+      const entries = await Promise.all(
+        ticket.imagePaths.map(async (imagePath, index) => {
+          try {
+            const blobUrl =
+              await ticketService.fetchAttachmentBlobUrl(imagePath);
+            generatedUrls.push(blobUrl);
+            return [index, blobUrl];
+          } catch (err) {
+            console.error(`Failed to load attachment ${index + 1}:`, err);
+            return [index, null];
+          }
+        }),
+      );
+
+      if (!isMounted) return;
+
+      const nextUrls = {};
+      entries.forEach(([index, url]) => {
+        if (url) nextUrls[index] = url;
+      });
+      setAttachmentUrls(nextUrls);
+    };
+
+    loadAttachmentUrls();
+
+    return () => {
+      isMounted = false;
+      generatedUrls.forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, [ticket?.id, ticket?.imagePaths]);
 
   /* Auto-scroll chat */
   useEffect(() => {
@@ -445,22 +487,23 @@ const TechnicianTicketPanel = ({
                     <h3 className="tech-detail-label">Attachments</h3>
                     <div className="tech-attachments">
                       {ticket.imagePaths.map((img, i) => {
-                        const apiBaseURL =
-                          process.env.REACT_APP_API_BASE ||
-                          "http://localhost:8080";
-                        const src = img.startsWith("http")
-                          ? img
-                          : `${apiBaseURL}${img.startsWith("/") ? "" : "/"}${img}`;
+                        const src = attachmentUrls[i];
                         return (
                           <a
                             key={i}
-                            href={src}
+                            href={src || undefined}
                             target="_blank"
                             rel="noopener noreferrer"
+                            onClick={(e) => {
+                              if (!src) e.preventDefault();
+                            }}
                             className="tech-attachment"
                           >
                             <img
-                              src={src}
+                              src={
+                                src ||
+                                "https://via.placeholder.com/120x80?text=Loading"
+                              }
                               alt={`Attachment ${i + 1}`}
                               onError={(e) => {
                                 e.target.src =

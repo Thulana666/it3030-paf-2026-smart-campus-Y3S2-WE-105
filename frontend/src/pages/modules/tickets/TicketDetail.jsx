@@ -13,6 +13,7 @@ const TicketDetail = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [attachmentUrls, setAttachmentUrls] = useState({});
 
   // Comment state
   const [newComment, setNewComment] = useState("");
@@ -26,6 +27,46 @@ const TicketDetail = () => {
   useEffect(() => {
     fetchTicket();
   }, [id]);
+
+  useEffect(() => {
+    let isMounted = true;
+    const generatedUrls = [];
+
+    const loadAttachmentUrls = async () => {
+      if (!ticket?.imagePaths?.length) {
+        setAttachmentUrls({});
+        return;
+      }
+
+      const entries = await Promise.all(
+        ticket.imagePaths.map(async (imgUrl, index) => {
+          try {
+            const blobUrl = await ticketService.fetchAttachmentBlobUrl(imgUrl);
+            generatedUrls.push(blobUrl);
+            return [index, blobUrl];
+          } catch (err) {
+            console.error(`Failed to load attachment ${index + 1}:`, err);
+            return [index, null];
+          }
+        }),
+      );
+
+      if (!isMounted) return;
+
+      const nextUrls = {};
+      entries.forEach(([index, url]) => {
+        if (url) nextUrls[index] = url;
+      });
+      setAttachmentUrls(nextUrls);
+    };
+
+    loadAttachmentUrls();
+
+    return () => {
+      isMounted = false;
+      generatedUrls.forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, [ticket?.id, ticket?.imagePaths]);
 
   // Loads ticket details AND comments from their separate endpoints
   const fetchTicket = async () => {
@@ -270,17 +311,17 @@ const TicketDetail = () => {
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
               {ticket.imagePaths.map((imgUrl, index) => {
-                const apiBaseURL = process.env.REACT_APP_API_BASE || 'http://localhost:8080';
-                const fullUrl = imgUrl.startsWith("http")
-                  ? imgUrl
-                  : `${apiBaseURL}${imgUrl.startsWith("/") ? "" : "/"}${imgUrl}`;
+                const attachmentSrc = attachmentUrls[index];
                 return (
                   <div
                     key={index}
                     className="relative aspect-video rounded-lg overflow-hidden border border-gray-200 group"
                   >
                     <img
-                      src={fullUrl}
+                      src={
+                        attachmentSrc ||
+                        "https://via.placeholder.com/400x300?text=Loading+Attachment"
+                      }
                       alt={`Attachment ${index + 1}`}
                       className="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105"
                       onError={(e) => {
@@ -289,12 +330,15 @@ const TicketDetail = () => {
                       }}
                     />
                     <a
-                      href={fullUrl}
+                      href={attachmentSrc || undefined}
                       target="_blank"
                       rel="noopener noreferrer"
+                      onClick={(e) => {
+                        if (!attachmentSrc) e.preventDefault();
+                      }}
                       className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white font-medium backdrop-blur-sm"
                     >
-                      View Full Size
+                      {attachmentSrc ? "View Full Size" : "Loading..."}
                     </a>
                   </div>
                 );

@@ -1,5 +1,20 @@
 import api from './api';
 
+const normalizeAttachmentPath = (imagePath) => {
+  if (!imagePath) return '';
+
+  if (imagePath.startsWith('http')) {
+    const { pathname, search } = new URL(imagePath);
+    const fullPath = `${pathname}${search || ''}`;
+    return fullPath.startsWith('/api/')
+      ? fullPath.replace(/^\/api/, '')
+      : imagePath;
+  }
+
+  const path = imagePath.startsWith('/') ? imagePath : `/${imagePath}`;
+  return path.startsWith('/api/') ? path.replace(/^\/api/, '') : path;
+};
+
 export const ticketService = {
   // ── User ticket operations ────────────────────────────────────────────────
 
@@ -94,5 +109,11 @@ export const ticketService = {
   addTechnicianComment: async (id, content) => {
     const response = await api.post(`/technician/tickets/${id}/comments`, { content });
     return response.data;
+  },
+
+  fetchAttachmentBlobUrl: async (imagePath) => {
+    const attachmentPath = normalizeAttachmentPath(imagePath);
+    const response = await api.get(attachmentPath, { responseType: 'blob' });
+    return URL.createObjectURL(response.data);
   },
 };
