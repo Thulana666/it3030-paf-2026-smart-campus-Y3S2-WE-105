@@ -19,6 +19,7 @@ import DashboardLayout from "./components/DashboardLayout";
 import BookingSystem from "./pages/modules/BookingSystem";
 import Facilities from "./pages/modules/Facilities";
 import IncidentTickets from "./pages/modules/IncidentTickets";
+import IncidentTicketsRouter from "./pages/modules/IncidentTicketsRouter";
 import Inventory from "./pages/modules/Inventory";
 import OpsSchedule from "./pages/modules/Schedule";
 import UserManagement from "./pages/admin/UserManagement";
@@ -74,7 +75,14 @@ function App() {
 
                 <Route path="bookings" element={<BookingSystem />} />
                 <Route path="facilities" element={<Facilities />} />
-                <Route path="incident-tickets" element={<IncidentTickets />} />
+                <Route
+                  path="incident-tickets"
+                  element={
+                    <ProtectedRoute>
+                      <IncidentTicketsRouter />
+                    </ProtectedRoute>
+                  }
+                />
                 <Route path="inventory" element={<Inventory />} />
                 <Route path="schedule" element={<OpsSchedule />} />
                 <Route path="tickets/create" element={<TicketCreate />} />
