@@ -1,308 +1,269 @@
-import React, { useState, useEffect, useContext, useCallback } from 'react';
-import { ticketService } from '../../services/ticketService';
-import { AuthContext } from '../../context/AuthContext';
-import TechnicianTicketPanel from './TechnicianTicketPanel';
+import React, { useContext } from "react";
+import { useNavigate } from "react-router-dom";
+import { AuthContext } from "../../context/AuthContext";
 
-/* ─── Helpers ───────────────────────────────────────────────────────────── */
-const PRIORITY_META = {
-  URGENT: { label: 'Urgent', cls: 'priority-URGENT', dot: '#dc2626' },
-  HIGH:   { label: 'High',   cls: 'priority-HIGH',   dot: '#ea580c' },
-  MEDIUM: { label: 'Medium', cls: 'priority-MEDIUM', dot: '#ca8a04' },
-  LOW:    { label: 'Low',    cls: 'priority-LOW',    dot: '#16a34a' },
-};
-
-const STATUS_META = {
-  OPEN:        { label: 'Open',        cls: 'status-OPEN'        },
-  IN_PROGRESS: { label: 'In Progress', cls: 'status-IN_PROGRESS' },
-  RESOLVED:    { label: 'Resolved',    cls: 'status-RESOLVED'    },
-  CLOSED:      { label: 'Closed',      cls: 'status-CLOSED'      },
-  REJECTED:    { label: 'Rejected',    cls: 'status-REJECTED'    },
-};
-
-function timeAgo(dt) {
-  if (!dt) return '—';
-  const diff = Date.now() - new Date(dt).getTime();
-  const m = Math.floor(diff / 60000);
-  if (m < 1)  return 'just now';
-  if (m < 60) return `${m}m ago`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h ago`;
-  return `${Math.floor(h / 24)}d ago`;
-}
-
-function isToday(dt) {
-  if (!dt) return false;
-  const d = new Date(dt);
-  const now = new Date();
-  return d.getFullYear() === now.getFullYear() &&
-         d.getMonth()    === now.getMonth()    &&
-         d.getDate()     === now.getDate();
-}
-
-/* ─── Component ─────────────────────────────────────────────────────────── */
 const TechnicianDashboard = () => {
   const { user } = useContext(AuthContext);
-  const [tickets,        setTickets]        = useState([]);
-  const [loading,        setLoading]        = useState(true);
-  const [error,          setError]          = useState(null);
-  const [selectedTicket, setSelectedTicket] = useState(null);
-  const [filterStatus,   setFilterStatus]   = useState('ALL');
-  const [searchQuery,    setSearchQuery]    = useState('');
+  const navigate = useNavigate();
 
-  const fetchTickets = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await ticketService.getTechnicianTickets();
-      setTickets(data || []);
-    } catch (err) {
-      console.error('Error fetching technician tickets:', err);
-      setError('Failed to load tickets. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { fetchTickets(); }, [fetchTickets]);
-
-  /* Stats */
-  const stats = {
-    total:       tickets.length,
-    inProgress:  tickets.filter(t => t.status === 'IN_PROGRESS').length,
-    resolved:    tickets.filter(t => t.status === 'RESOLVED' && isToday(t.updatedAt)).length,
-    urgent:      tickets.filter(t => t.priority === 'URGENT' && !['CLOSED','RESOLVED','REJECTED'].includes(t.status)).length,
-  };
-
-  /* Filtered list */
-  const filtered = tickets.filter(t => {
-    if (filterStatus !== 'ALL' && t.status !== filterStatus) return false;
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      return (
-        t.title?.toLowerCase().includes(q) ||
-        t.category?.toLowerCase().includes(q) ||
-        t.createdByName?.toLowerCase().includes(q)
-      );
-    }
-    return true;
-  });
-
-  const handleTicketUpdated = (updated) => {
-    setTickets(prev => prev.map(t => t.id === updated.id ? updated : t));
-    setSelectedTicket(updated);
-  };
-
-  /* ── Render ─────────────────────────────────────────────────────────────── */
   return (
-    <div className="tech-dashboard">
-
-      {/* ── Header ── */}
-      <div className="tech-header">
-        <div className="tech-header-text">
-          <h1>Technician Portal</h1>
-          <p>
-            Welcome back, <span className="tech-header-name">{user?.name || user?.email}</span>.
-            Here are your assigned tickets.
-          </p>
-        </div>
-        <button className="tech-refresh-btn" onClick={fetchTickets} title="Refresh">
-          <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
-              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-          </svg>
-          Refresh
-        </button>
+    <div
+      className="page-container"
+      style={{ animation: "slideUp 0.5s ease backwards" }}
+    >
+      {/* Header Section */}
+      <div
+        className="glass"
+        style={{
+          padding: "2.5rem",
+          borderRadius: "20px",
+          marginBottom: "2rem",
+          borderLeft: "6px solid var(--general-color)",
+        }}
+      >
+        <h1
+          style={{
+            fontSize: "2.2rem",
+            marginBottom: "0.5rem",
+            color: "var(--text-dark)",
+          }}
+        >
+          Technician Portal
+        </h1>
+        <p style={{ color: "var(--text-muted)", fontSize: "1.05rem" }}>
+          Maintenance & Operations active.{" "}
+          <span style={{ color: "var(--general-color)", fontWeight: "600" }}>
+            Welcome, {user?.name || user?.email}
+          </span>{" "}
+          — Operations Hub is ready.
+        </p>
       </div>
 
-      {/* ── Stats Cards ── */}
-      <div className="tech-stats-grid">
-        <div className="tech-stat-card tech-stat-blue">
-          <div className="tech-stat-icon">
-            <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
-                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
-            </svg>
-          </div>
-          <div>
-            <div className="tech-stat-number">{stats.total}</div>
-            <div className="tech-stat-label">Total Assigned</div>
-          </div>
-        </div>
-
-        <div className="tech-stat-card tech-stat-purple">
-          <div className="tech-stat-icon">
-            <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
-                d="M13 10V3L4 14h7v7l9-11h-7z"/>
-            </svg>
-          </div>
-          <div>
-            <div className="tech-stat-number">{stats.inProgress}</div>
-            <div className="tech-stat-label">In Progress</div>
-          </div>
-        </div>
-
-        <div className="tech-stat-card tech-stat-green">
-          <div className="tech-stat-icon">
-            <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
-                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-            </svg>
-          </div>
-          <div>
-            <div className="tech-stat-number">{stats.resolved}</div>
-            <div className="tech-stat-label">Resolved Today</div>
-          </div>
-        </div>
-
-        <div className="tech-stat-card tech-stat-red">
-          <div className="tech-stat-icon">
-            <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
-                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-            </svg>
-          </div>
-          <div>
-            <div className="tech-stat-number">{stats.urgent}</div>
-            <div className="tech-stat-label">Urgent Open</div>
-          </div>
-        </div>
-      </div>
-
-      {/* ── Ticket List Card ── */}
-      <div className="tech-ticket-card">
-
-        {/* Toolbar */}
-        <div className="tech-toolbar">
-          <h2 className="tech-toolbar-title">Assigned Tickets</h2>
-          <div className="tech-toolbar-right">
-            {/* Search */}
-            <div className="tech-search">
-              <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-              </svg>
-              <input
-                type="text"
-                placeholder="Search tickets…"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-
-            {/* Status filter */}
-            <select
-              className="tech-filter-select"
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
+      {/* Technician Module Grid */}
+      <div
+        style={{
+          display: "grid",
+          gap: "1.5rem",
+          gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
+        }}
+      >
+        {/* Maintenance Tasks Card */}
+        <div
+          className="card glass"
+          style={{
+            padding: "2rem",
+            borderRadius: "15px",
+            display: "flex",
+            flexDirection: "column",
+            gap: "1rem",
+            transition: "transform 0.2s",
+            cursor: "default",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <div
+              style={{
+                background: "rgba(239, 68, 68, 0.1)",
+                padding: "12px",
+                borderRadius: "12px",
+                color: "#ef4444",
+              }}
             >
-              <option value="ALL">All Statuses</option>
-              <option value="OPEN">Open</option>
-              <option value="IN_PROGRESS">In Progress</option>
-              <option value="RESOLVED">Resolved</option>
-              <option value="CLOSED">Closed</option>
-            </select>
+              <svg
+                width="28"
+                height="28"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>
+              </svg>
+            </div>
+            <h3 style={{ fontSize: "1.3rem", color: "var(--text-dark)" }}>
+              Assigned Tickets
+            </h3>
+          </div>
+          <p style={{ color: "var(--text-muted)", flex: 1 }}>
+            Resolve infrastructure failures, manage hardware repairs, and track
+            operational incident resolutions.
+          </p>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginTop: "auto",
+            }}
+          >
+            <span
+              className="badge badge-ticket"
+              style={{ color: "#ef4444", background: "rgba(239,68,68,0.1)" }}
+            >
+              No Pending
+            </span>
+            <button
+              onClick={() => navigate("/dashboard/incident-tickets")}
+              className="btn btn-outline"
+              style={{
+                padding: "0.4rem 1rem",
+                borderColor: "#ef4444",
+                color: "#ef4444",
+              }}
+            >
+              Worklist
+            </button>
           </div>
         </div>
 
-        {/* Content */}
-        {loading ? (
-          <div className="tech-state-center">
-            <div className="tech-spinner tech-spinner-lg"/>
-            <p>Loading your assignments…</p>
+        {/* Inventory Hub Card */}
+        <div
+          className="card glass"
+          style={{
+            padding: "2rem",
+            borderRadius: "15px",
+            display: "flex",
+            flexDirection: "column",
+            gap: "1rem",
+            transition: "transform 0.2s",
+            cursor: "default",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <div
+              style={{
+                background: "rgba(59, 130, 246, 0.1)",
+                padding: "12px",
+                borderRadius: "12px",
+                color: "#3b82f6",
+              }}
+            >
+              <svg
+                width="28"
+                height="28"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M21 8V20a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8"></path>
+                <path d="M1 3h22v5H1z"></path>
+                <path d="M10 12h4"></path>
+              </svg>
+            </div>
+            <h3 style={{ fontSize: "1.3rem", color: "var(--text-dark)" }}>
+              Inventory & Stock
+            </h3>
           </div>
-        ) : error ? (
-          <div className="tech-state-center tech-state-error">
-            <svg width="40" height="40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5"
-                d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-            </svg>
-            <p>{error}</p>
-            <button className="tech-btn-retry" onClick={fetchTickets}>Try Again</button>
+          <p style={{ color: "var(--text-muted)", flex: 1 }}>
+            Manage logistical supplies, track electrical component stock, and
+            oversee hardware parts inventory.
+          </p>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginTop: "auto",
+            }}
+          >
+            <span
+              className="badge badge-booking"
+              style={{
+                background: "rgba(59, 130, 246, 0.1)",
+                color: "#3b82f6",
+              }}
+            >
+              Stable Levels
+            </span>
+            <button
+              onClick={() => navigate("/dashboard/inventory")}
+              className="btn btn-outline"
+              style={{
+                padding: "0.4rem 1rem",
+                borderColor: "#3b82f6",
+                color: "#3b82f6",
+              }}
+            >
+              Supplies
+            </button>
           </div>
-        ) : filtered.length === 0 ? (
-          <div className="tech-state-center">
-            <svg width="56" height="56" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.2"
-                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-            </svg>
-            <p className="tech-state-title">
-              {tickets.length === 0 ? 'No assigned tickets' : 'No tickets match your filter'}
-            </p>
-            <p className="tech-state-sub">
-              {tickets.length === 0
-                ? "You're all caught up! Enjoy your break."
-                : 'Try changing the status filter or search term.'}
-            </p>
-          </div>
-        ) : (
-          <div className="tech-table-wrap">
-            <table className="tech-table">
-              <thead>
-                <tr>
-                  <th>Ticket</th>
-                  <th>Student</th>
-                  <th>Priority</th>
-                  <th>Status</th>
-                  <th>Age</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((ticket) => {
-                  const pm = PRIORITY_META[ticket.priority] || PRIORITY_META.LOW;
-                  const sm = STATUS_META[ticket.status]     || STATUS_META.OPEN;
-                  const isActive = selectedTicket?.id === ticket.id;
-                  return (
-                    <tr
-                      key={ticket.id}
-                      className={`tech-table-row ${isActive ? 'active' : ''}`}
-                      onClick={() => setSelectedTicket(ticket)}
-                    >
-                      <td>
-                        <div className="tech-table-ticket-title">{ticket.title}</div>
-                        <div className="tech-table-ticket-id">#{ticket.id?.slice(-8).toUpperCase()}</div>
-                      </td>
-                      <td>
-                        <div className="tech-table-student">
-                          <div className="tech-avatar tech-avatar-student tech-avatar-xs">
-                            {(ticket.createdByName || 'S').charAt(0).toUpperCase()}
-                          </div>
-                          <span>{ticket.createdByName || '—'}</span>
-                        </div>
-                      </td>
-                      <td>
-                        <span className={`ticket-priority ${pm.cls}`}>{pm.label}</span>
-                      </td>
-                      <td>
-                        <span className={`ticket-status ${sm.cls}`}>{sm.label}</span>
-                      </td>
-                      <td className="tech-table-age">{timeAgo(ticket.createdAt)}</td>
-                      <td>
-                        <button
-                          className="tech-btn-view"
-                          onClick={(e) => { e.stopPropagation(); setSelectedTicket(ticket); }}
-                        >
-                          View & Chat →
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+        </div>
 
-      {/* ── Slide-in Panel ── */}
-      {selectedTicket && (
-        <TechnicianTicketPanel
-          ticket={selectedTicket}
-          onClose={() => setSelectedTicket(null)}
-          onTicketUpdated={handleTicketUpdated}
-        />
-      )}
+        {/* Operations Schedule Card */}
+        <div
+          className="card glass"
+          style={{
+            padding: "2rem",
+            borderRadius: "15px",
+            display: "flex",
+            flexDirection: "column",
+            gap: "1rem",
+            transition: "transform 0.2s",
+            cursor: "default",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <div
+              style={{
+                background: "rgba(16, 185, 129, 0.1)",
+                padding: "12px",
+                borderRadius: "12px",
+                color: "#10b981",
+              }}
+            >
+              <svg
+                width="28"
+                height="28"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="16" y1="2" x2="16" y2="6"></line>
+                <line x1="8" y1="2" x2="8" y2="6"></line>
+                <line x1="3" y1="10" x2="21" y2="10"></line>
+              </svg>
+            </div>
+            <h3 style={{ fontSize: "1.3rem", color: "var(--text-dark)" }}>
+              Operational Schedule
+            </h3>
+          </div>
+          <p style={{ color: "var(--text-muted)", flex: 1 }}>
+            View weekly maintenance patrols, scheduled facility shutdowns, and
+            team deployment rotations.
+          </p>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginTop: "auto",
+            }}
+          >
+            <span
+              className="badge badge-general"
+              style={{ color: "#10b981", background: "rgba(16,185,129,0.1)" }}
+            >
+              Live Cycles
+            </span>
+            <button
+              onClick={() => navigate("/dashboard/schedule")}
+              className="btn btn-primary"
+              style={{ padding: "0.4rem 1rem" }}
+            >
+              Shift Info
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
