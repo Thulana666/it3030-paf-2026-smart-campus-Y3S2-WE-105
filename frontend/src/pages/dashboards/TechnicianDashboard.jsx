@@ -1,148 +1,308 @@
-import React, { useState, useEffect, useContext } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useContext, useCallback } from 'react';
 import { ticketService } from '../../services/ticketService';
 import { AuthContext } from '../../context/AuthContext';
+import TechnicianTicketPanel from './TechnicianTicketPanel';
 
+/* ─── Helpers ───────────────────────────────────────────────────────────── */
+const PRIORITY_META = {
+  URGENT: { label: 'Urgent', cls: 'priority-URGENT', dot: '#dc2626' },
+  HIGH:   { label: 'High',   cls: 'priority-HIGH',   dot: '#ea580c' },
+  MEDIUM: { label: 'Medium', cls: 'priority-MEDIUM', dot: '#ca8a04' },
+  LOW:    { label: 'Low',    cls: 'priority-LOW',    dot: '#16a34a' },
+};
+
+const STATUS_META = {
+  OPEN:        { label: 'Open',        cls: 'status-OPEN'        },
+  IN_PROGRESS: { label: 'In Progress', cls: 'status-IN_PROGRESS' },
+  RESOLVED:    { label: 'Resolved',    cls: 'status-RESOLVED'    },
+  CLOSED:      { label: 'Closed',      cls: 'status-CLOSED'      },
+  REJECTED:    { label: 'Rejected',    cls: 'status-REJECTED'    },
+};
+
+function timeAgo(dt) {
+  if (!dt) return '—';
+  const diff = Date.now() - new Date(dt).getTime();
+  const m = Math.floor(diff / 60000);
+  if (m < 1)  return 'just now';
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  return `${Math.floor(h / 24)}d ago`;
+}
+
+function isToday(dt) {
+  if (!dt) return false;
+  const d = new Date(dt);
+  const now = new Date();
+  return d.getFullYear() === now.getFullYear() &&
+         d.getMonth()    === now.getMonth()    &&
+         d.getDate()     === now.getDate();
+}
+
+/* ─── Component ─────────────────────────────────────────────────────────── */
 const TechnicianDashboard = () => {
   const { user } = useContext(AuthContext);
-  const navigate = useNavigate();
-  const [tickets, setTickets] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [tickets,        setTickets]        = useState([]);
+  const [loading,        setLoading]        = useState(true);
+  const [error,          setError]          = useState(null);
+  const [selectedTicket, setSelectedTicket] = useState(null);
+  const [filterStatus,   setFilterStatus]   = useState('ALL');
+  const [searchQuery,    setSearchQuery]    = useState('');
 
-  useEffect(() => {
-    const fetchTickets = async () => {
-      try {
-        const data = await ticketService.getTechnicianTickets();
-        setTickets(data);
-      } catch (err) {
-        console.error('Error fetching technician tickets:', err);
-        setError('Failed to load tickets. Please try again.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchTickets();
+  const fetchTickets = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await ticketService.getTechnicianTickets();
+      setTickets(data || []);
+    } catch (err) {
+      console.error('Error fetching technician tickets:', err);
+      setError('Failed to load tickets. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const getPriorityColor = (priority) => {
-    switch (priority) {
-      case 'URGENT': return 'bg-red-100 text-red-800 border-red-200';
-      case 'HIGH': return 'bg-orange-100 text-orange-800 border-orange-200';
-      case 'MEDIUM': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'LOW': return 'bg-green-100 text-green-800 border-green-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
+  useEffect(() => { fetchTickets(); }, [fetchTickets]);
+
+  /* Stats */
+  const stats = {
+    total:       tickets.length,
+    inProgress:  tickets.filter(t => t.status === 'IN_PROGRESS').length,
+    resolved:    tickets.filter(t => t.status === 'RESOLVED' && isToday(t.updatedAt)).length,
+    urgent:      tickets.filter(t => t.priority === 'URGENT' && !['CLOSED','RESOLVED','REJECTED'].includes(t.status)).length,
   };
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'OPEN': return 'bg-blue-100 text-blue-800';
-      case 'IN_PROGRESS': return 'bg-purple-100 text-purple-800';
-      case 'RESOLVED': return 'bg-emerald-100 text-emerald-800';
-      case 'CLOSED': return 'bg-gray-100 text-gray-800';
-      default: return 'bg-gray-100 text-gray-800';
+  /* Filtered list */
+  const filtered = tickets.filter(t => {
+    if (filterStatus !== 'ALL' && t.status !== filterStatus) return false;
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      return (
+        t.title?.toLowerCase().includes(q) ||
+        t.category?.toLowerCase().includes(q) ||
+        t.createdByName?.toLowerCase().includes(q)
+      );
     }
+    return true;
+  });
+
+  const handleTicketUpdated = (updated) => {
+    setTickets(prev => prev.map(t => t.id === updated.id ? updated : t));
+    setSelectedTicket(updated);
   };
 
+  /* ── Render ─────────────────────────────────────────────────────────────── */
   return (
-    <div className="max-w-7xl mx-auto p-6 space-y-8 animate-[slideUp_0.5s_ease-out]">
-      {/* Header */}
-      <div className="bg-white/80 backdrop-blur-lg p-8 rounded-2xl shadow-sm border border-gray-100 flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Technician Portal</h1>
-          <p className="text-gray-500">
-            Welcome back, <span className="font-semibold text-blue-600">{user?.name || user?.email}</span>. Here are your assigned tickets.
+    <div className="tech-dashboard">
+
+      {/* ── Header ── */}
+      <div className="tech-header">
+        <div className="tech-header-text">
+          <h1>Technician Portal</h1>
+          <p>
+            Welcome back, <span className="tech-header-name">{user?.name || user?.email}</span>.
+            Here are your assigned tickets.
           </p>
         </div>
-        <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
-          <p className="text-sm text-blue-600 font-medium">Total Assigned</p>
-          <p className="text-3xl font-bold text-blue-700">{tickets.length}</p>
+        <button className="tech-refresh-btn" onClick={fetchTickets} title="Refresh">
+          <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
+              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+          </svg>
+          Refresh
+        </button>
+      </div>
+
+      {/* ── Stats Cards ── */}
+      <div className="tech-stats-grid">
+        <div className="tech-stat-card tech-stat-blue">
+          <div className="tech-stat-icon">
+            <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
+                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+            </svg>
+          </div>
+          <div>
+            <div className="tech-stat-number">{stats.total}</div>
+            <div className="tech-stat-label">Total Assigned</div>
+          </div>
+        </div>
+
+        <div className="tech-stat-card tech-stat-purple">
+          <div className="tech-stat-icon">
+            <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
+                d="M13 10V3L4 14h7v7l9-11h-7z"/>
+            </svg>
+          </div>
+          <div>
+            <div className="tech-stat-number">{stats.inProgress}</div>
+            <div className="tech-stat-label">In Progress</div>
+          </div>
+        </div>
+
+        <div className="tech-stat-card tech-stat-green">
+          <div className="tech-stat-icon">
+            <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
+                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+          </div>
+          <div>
+            <div className="tech-stat-number">{stats.resolved}</div>
+            <div className="tech-stat-label">Resolved Today</div>
+          </div>
+        </div>
+
+        <div className="tech-stat-card tech-stat-red">
+          <div className="tech-stat-icon">
+            <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+            </svg>
+          </div>
+          <div>
+            <div className="tech-stat-number">{stats.urgent}</div>
+            <div className="tech-stat-label">Urgent Open</div>
+          </div>
         </div>
       </div>
 
-      {/* Tickets Table */}
-      <div className="bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden">
-        <div className="p-6 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
-          <h2 className="text-xl font-bold text-gray-800">Assigned Tickets</h2>
-          <button 
-            onClick={() => window.location.reload()} 
-            className="text-sm px-4 py-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors shadow-sm font-medium text-gray-600"
-          >
-            Refresh List
-          </button>
+      {/* ── Ticket List Card ── */}
+      <div className="tech-ticket-card">
+
+        {/* Toolbar */}
+        <div className="tech-toolbar">
+          <h2 className="tech-toolbar-title">Assigned Tickets</h2>
+          <div className="tech-toolbar-right">
+            {/* Search */}
+            <div className="tech-search">
+              <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+              </svg>
+              <input
+                type="text"
+                placeholder="Search tickets…"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+
+            {/* Status filter */}
+            <select
+              className="tech-filter-select"
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+            >
+              <option value="ALL">All Statuses</option>
+              <option value="OPEN">Open</option>
+              <option value="IN_PROGRESS">In Progress</option>
+              <option value="RESOLVED">Resolved</option>
+              <option value="CLOSED">Closed</option>
+            </select>
+          </div>
         </div>
-        
+
+        {/* Content */}
         {loading ? (
-          <div className="p-12 text-center">
-            <div className="inline-block animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full mb-4"></div>
-            <p className="text-gray-500 font-medium">Loading your assignments...</p>
+          <div className="tech-state-center">
+            <div className="tech-spinner tech-spinner-lg"/>
+            <p>Loading your assignments…</p>
           </div>
         ) : error ? (
-          <div className="p-8 text-center text-red-500 bg-red-50">
-            <p className="font-medium">{error}</p>
+          <div className="tech-state-center tech-state-error">
+            <svg width="40" height="40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5"
+                d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <p>{error}</p>
+            <button className="tech-btn-retry" onClick={fetchTickets}>Try Again</button>
           </div>
-        ) : tickets.length === 0 ? (
-          <div className="p-16 text-center text-gray-500">
-            <svg className="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-            <p className="text-lg font-medium text-gray-900 mb-1">No assigned tickets</p>
-            <p className="text-gray-500">You're all caught up! Enjoy your break.</p>
+        ) : filtered.length === 0 ? (
+          <div className="tech-state-center">
+            <svg width="56" height="56" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.2"
+                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
+            <p className="tech-state-title">
+              {tickets.length === 0 ? 'No assigned tickets' : 'No tickets match your filter'}
+            </p>
+            <p className="tech-state-sub">
+              {tickets.length === 0
+                ? "You're all caught up! Enjoy your break."
+                : 'Try changing the status filter or search term.'}
+            </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+          <div className="tech-table-wrap">
+            <table className="tech-table">
               <thead>
-                <tr className="bg-gray-50 text-gray-600 text-sm uppercase tracking-wider">
-                  <th className="p-4 font-semibold">Ticket ID</th>
-                  <th className="p-4 font-semibold">Title</th>
-                  <th className="p-4 font-semibold">Priority</th>
-                  <th className="p-4 font-semibold">Status</th>
-                  <th className="p-4 font-semibold text-right">Action</th>
+                <tr>
+                  <th>Ticket</th>
+                  <th>Student</th>
+                  <th>Priority</th>
+                  <th>Status</th>
+                  <th>Age</th>
+                  <th></th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
-                {tickets.map((ticket) => (
-                  <tr 
-                    key={ticket.id} 
-                    className="hover:bg-gray-50/80 transition-colors group cursor-pointer"
-                    onClick={() => navigate(`/dashboard/tickets/${ticket.id}`)}
-                  >
-                    <td className="p-4">
-                      <span className="font-mono text-sm text-gray-500">#{ticket.id}</span>
-                    </td>
-                    <td className="p-4">
-                      <p className="font-medium text-gray-900 group-hover:text-blue-600 transition-colors">{ticket.title}</p>
-                      <p className="text-sm text-gray-500 truncate max-w-xs">{ticket.description}</p>
-                    </td>
-                    <td className="p-4">
-                      <span className={`px-3 py-1 rounded-full text-xs font-bold border ${getPriorityColor(ticket.priority)}`}>
-                        {ticket.priority}
-                      </span>
-                    </td>
-                    <td className="p-4">
-                      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(ticket.status)}`}>
-                        {ticket.status.replace('_', ' ')}
-                      </span>
-                    </td>
-                    <td className="p-4 text-right">
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate(`/dashboard/tickets/${ticket.id}`);
-                        }}
-                        className="text-blue-600 hover:text-blue-800 font-medium text-sm px-3 py-1.5 rounded-lg hover:bg-blue-50 transition-colors"
-                      >
-                        View Details →
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+              <tbody>
+                {filtered.map((ticket) => {
+                  const pm = PRIORITY_META[ticket.priority] || PRIORITY_META.LOW;
+                  const sm = STATUS_META[ticket.status]     || STATUS_META.OPEN;
+                  const isActive = selectedTicket?.id === ticket.id;
+                  return (
+                    <tr
+                      key={ticket.id}
+                      className={`tech-table-row ${isActive ? 'active' : ''}`}
+                      onClick={() => setSelectedTicket(ticket)}
+                    >
+                      <td>
+                        <div className="tech-table-ticket-title">{ticket.title}</div>
+                        <div className="tech-table-ticket-id">#{ticket.id?.slice(-8).toUpperCase()}</div>
+                      </td>
+                      <td>
+                        <div className="tech-table-student">
+                          <div className="tech-avatar tech-avatar-student tech-avatar-xs">
+                            {(ticket.createdByName || 'S').charAt(0).toUpperCase()}
+                          </div>
+                          <span>{ticket.createdByName || '—'}</span>
+                        </div>
+                      </td>
+                      <td>
+                        <span className={`ticket-priority ${pm.cls}`}>{pm.label}</span>
+                      </td>
+                      <td>
+                        <span className={`ticket-status ${sm.cls}`}>{sm.label}</span>
+                      </td>
+                      <td className="tech-table-age">{timeAgo(ticket.createdAt)}</td>
+                      <td>
+                        <button
+                          className="tech-btn-view"
+                          onClick={(e) => { e.stopPropagation(); setSelectedTicket(ticket); }}
+                        >
+                          View & Chat →
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         )}
       </div>
+
+      {/* ── Slide-in Panel ── */}
+      {selectedTicket && (
+        <TechnicianTicketPanel
+          ticket={selectedTicket}
+          onClose={() => setSelectedTicket(null)}
+          onTicketUpdated={handleTicketUpdated}
+        />
+      )}
     </div>
   );
 };
