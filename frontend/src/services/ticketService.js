@@ -1,12 +1,11 @@
 import api from './api';
 
 export const ticketService = {
+  // ── User ticket operations ────────────────────────────────────────────────
+
   createTicket: async (formData) => {
-    // FormData implies multipart/form-data
     const response = await api.post('/tickets', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
+      headers: { 'Content-Type': 'multipart/form-data' },
     });
     return response.data;
   },
@@ -16,25 +15,23 @@ export const ticketService = {
     return response.data;
   },
 
-  getTechnicianTickets: async () => {
-    const response = await api.get('/technician/tickets');
-    return response.data;
-  },
-
   getTicketById: async (id) => {
-    // Adding this one because TicketDetail needs to fetch single ticket
     const response = await api.get(`/tickets/${id}`);
     return response.data;
   },
 
-  resolveTicket: async (id, payload) => {
-    // Payload: { status: 'RESOLVED', resolutionNotes: '...' }
-    const response = await api.put(`/technician/tickets/${id}/resolve`, payload);
+  updateTicket: async (id, payload) => {
+    const response = await api.put(`/tickets/${id}`, payload);
     return response.data;
   },
 
+  deleteTicket: async (id) => {
+    await api.delete(`/tickets/${id}`);
+  },
+
+  // ── Comment operations (shared, used by both user and technician) ─────────
+
   addComment: async (id, payload) => {
-    // Payload: { content: '...' }
     const response = await api.post(`/tickets/${id}/comments`, payload);
     return response.data;
   },
@@ -49,13 +46,53 @@ export const ticketService = {
     return response.data;
   },
 
-  updateTicket: async (id, payload) => {
-    // payload: { title, description, category, priority, contactDetails, resourceId }
-    const response = await api.put(`/tickets/${id}`, payload);
+  // ── Technician operations ─────────────────────────────────────────────────
+
+  getTechnicianTickets: async () => {
+    const response = await api.get('/technician/tickets');
     return response.data;
   },
 
-  deleteTicket: async (id) => {
-    await api.delete(`/tickets/${id}`);
+  getTechnicianTicketById: async (id) => {
+    const response = await api.get(`/technician/tickets/${id}`);
+    return response.data;
+  },
+
+  /** Update ticket status (and optionally resolution notes) */
+  updateTicketStatus: async (id, status, resolutionNotes = null) => {
+    const response = await api.put(`/technician/tickets/${id}/status`, {
+      status,
+      resolutionNotes,
+    });
+    return response.data;
+  },
+
+  /** Resolve ticket with notes (legacy endpoint) */
+  resolveTicket: async (id, resolutionNotes) => {
+    const response = await api.put(
+      `/technician/tickets/${id}/resolve`,
+      { resolutionNotes }
+    );
+    return response.data;
+  },
+
+  /** Close ticket as solved */
+  closeTicket: async (id, resolutionNotes = null) => {
+    const response = await api.put(`/technician/tickets/${id}/close`, {
+      resolutionNotes,
+    });
+    return response.data;
+  },
+
+  /** Get comments via technician endpoint (enriched with names) */
+  getTechnicianComments: async (id) => {
+    const response = await api.get(`/technician/tickets/${id}/comments`);
+    return response.data;
+  },
+
+  /** Add comment via technician endpoint */
+  addTechnicianComment: async (id, content) => {
+    const response = await api.post(`/technician/tickets/${id}/comments`, { content });
+    return response.data;
   },
 };
