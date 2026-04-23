@@ -10,6 +10,13 @@ import { getAllResources } from '../../services/resourceService';
 import BookingForm from '../../components/booking/BookingForm';
 import BookingList from '../../components/booking/BookingList';
 
+/**
+ * BookingSystem Component
+ * 
+ * Main module for students to manage their campus resource reservations.
+ * Provides real-time statistics, search/filtering, and integration with 
+ * the facility booking workflow.
+ */
 export default function BookingSystem() {
   const { user } = useContext(AuthContext);
 
