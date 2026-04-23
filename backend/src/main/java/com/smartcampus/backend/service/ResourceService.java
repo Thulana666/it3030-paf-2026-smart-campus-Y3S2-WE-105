@@ -35,7 +35,7 @@ public class ResourceService {
                 request.getAvailabilityStartTime(),
                 request.getAvailabilityEndTime(),
                 request.getDescription(),
-                ResourceStatus.valueOf(request.getStatus())
+                ResourceStatus.valueOf(request.getStatus().toUpperCase())
         );
 
         return resourceRepository.save(resource);
@@ -48,7 +48,7 @@ public class ResourceService {
 
     // Get active resources only
     public List<Resource> getActiveResources() {
-        return resourceRepository.findByStatus(ResourceStatus.ACTIVE.name());
+        return resourceRepository.findByStatus(ResourceStatus.ACTIVE);
     }
 
     // Get resource by ID
@@ -105,7 +105,7 @@ public class ResourceService {
         resource.setAvailabilityStartTime(request.getAvailabilityStartTime());
         resource.setAvailabilityEndTime(request.getAvailabilityEndTime());
         resource.setDescription(request.getDescription());
-        resource.setStatus(ResourceStatus.valueOf(request.getStatus()));
+        resource.setStatus(ResourceStatus.valueOf(request.getStatus().toUpperCase()));
 
         return resourceRepository.save(resource);
     }
@@ -113,7 +113,7 @@ public class ResourceService {
     // Change resource status
     public Resource changeResourceStatus(String id, String newStatus) {
         Resource resource = getResourceById(id);
-        resource.setStatus(ResourceStatus.valueOf(newStatus));
+        resource.setStatus(ResourceStatus.valueOf(newStatus.toUpperCase()));
         return resourceRepository.save(resource);
     }
 
@@ -146,6 +146,6 @@ public class ResourceService {
 
     // Get resources by status
     public List<Resource> getResourcesByStatus(String status) {
-        return resourceRepository.findByStatus(status);
+        return resourceRepository.findByStatus(ResourceStatus.valueOf(status.toUpperCase()));
     }
 }
