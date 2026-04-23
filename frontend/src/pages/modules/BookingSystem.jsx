@@ -26,6 +26,7 @@ export default function BookingSystem() {
   const [editingBooking, setEditingBooking] = useState(null);
   const [cancellingId, setCancellingId] = useState(null);
   const [toast,       setToast]       = useState(null);
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, bookingId: null, actionType: 'CANCEL' });
   const [searchTerm,  setSearchTerm]  = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [resources, setResources] = useState([]);
@@ -87,15 +88,34 @@ export default function BookingSystem() {
     });
   }, [bookings, searchTerm, statusFilter]);
 
-  const handleCancel = async (id) => {
-    if (!window.confirm('Are you sure you want to cancel this booking?')) return;
+  const handleCancel = (id) => {
+    const booking = bookings.find(b => b.id === id);
+    const isDelete = booking?.status === 'CANCELLED' || booking?.status === 'REJECTED';
+    setConfirmModal({ 
+      isOpen: true, 
+      bookingId: id, 
+      actionType: isDelete ? 'DELETE' : 'CANCEL' 
+    });
+  };
+
+  const executeCancel = async () => {
+    const id = confirmModal.bookingId;
+    const isDelete = confirmModal.actionType === 'DELETE';
+    setConfirmModal({ isOpen: false, bookingId: null, actionType: 'CANCEL' });
+    
     try {
       setCancellingId(id);
       await cancelBooking(id, studentId);
-      showToast('Booking cancelled.', 'info');
-      setBookings(prev => prev.filter(b => b.id !== id));
+      
+      if (isDelete) {
+        showToast('Booking removed permanently', 'info');
+        setBookings(prev => prev.filter(b => b.id !== id));
+      } else {
+        showToast('Booking cancelled successfully', 'info');
+        await fetchBookings(); // Refresh to show CANCELLED status
+      }
     } catch (err) {
-      showToast('Failed to cancel booking.', 'error');
+      showToast('Action failed', 'error');
     } finally {
       setCancellingId(null);
     }
@@ -226,12 +246,54 @@ export default function BookingSystem() {
         />
       )}
 
+      {/* ── Custom Confirmation Modal ── */}
+      {confirmModal.isOpen && (
+        <div className="bk-confirm-overlay">
+          <div className="bk-confirm-modal">
+            <div className="bk-confirm-icon">{confirmModal.actionType === 'DELETE' ? '🗑️' : '⚠️'}</div>
+            <h3 className="bk-confirm-title">
+              {confirmModal.actionType === 'DELETE' ? 'Delete' : 'Cancel'} Booking?
+            </h3>
+            <p className="bk-confirm-text">
+              {confirmModal.actionType === 'DELETE' 
+                ? 'Are you sure you want to permanently remove this booking record? This cannot be undone.'
+                : 'Are you sure you want to cancel this reservation? This action cannot be undone.'}
+            </p>
+            <div className="bk-confirm-actions">
+              <button 
+                className="bk-confirm-btn bk-confirm-cancel"
+                onClick={() => setConfirmModal({ isOpen: false, bookingId: null, actionType: 'CANCEL' })}
+              >
+                Go Back
+              </button>
+              <button 
+                className="bk-confirm-btn bk-confirm-proceed"
+                onClick={executeCancel}
+                style={confirmModal.actionType === 'DELETE' ? { background: '#ef4444' } : {}}
+              >
+                {confirmModal.actionType === 'DELETE' ? 'Yes, Delete' : 'Yes, Cancel'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Toast Notification ── */}
       {toast && (
-        <div className="bk-toast" style={{
-            background: toast.type === 'error' ? '#ef4444' : toast.type === 'info' ? '#0ea5e9' : '#10b981',
-          }}>
-          {toast.msg}
+        <div className="bk-toast-container">
+          <div className="bk-toast" style={{
+              borderLeft: `5px solid ${toast.type === 'error' ? '#ef4444' : toast.type === 'info' ? '#0ea5e9' : '#10b981'}`,
+            }}>
+            <div className="bk-toast-icon" style={{
+              background: toast.type === 'error' ? 'rgba(239, 68, 68, 0.1)' : toast.type === 'info' ? 'rgba(14, 165, 233, 0.1)' : 'rgba(16, 185, 129, 0.1)',
+              color: toast.type === 'error' ? '#ef4444' : toast.type === 'info' ? '#0ea5e9' : '#10b981'
+            }}>
+              {toast.type === 'error' ? '❌' : toast.type === 'info' ? 'ℹ️' : '✅'}
+            </div>
+            <div className="bk-toast-content">
+              <div className="bk-toast-msg">{toast.msg}</div>
+            </div>
+          </div>
         </div>
       )}
     </div>

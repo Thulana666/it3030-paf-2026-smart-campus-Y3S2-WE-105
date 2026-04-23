@@ -188,8 +188,10 @@ public class BookingService {
             throw new com.smartcampus.backend.exception.UnauthorizedException("You do not have permission to edit this booking");
         }
         
-        if (booking.getStatus() != BookingStatus.PENDING && booking.getStatus() != BookingStatus.APPROVED) {
-            throw new IllegalArgumentException("Only PENDING or APPROVED bookings can be edited");
+        if (booking.getStatus() != BookingStatus.PENDING && 
+            booking.getStatus() != BookingStatus.APPROVED &&
+            booking.getStatus() != BookingStatus.REJECTED) {
+            throw new IllegalArgumentException("Only PENDING, APPROVED, or REJECTED bookings can be edited");
         }
         
         booking.setPurpose(updatedBooking.getPurpose());
@@ -248,26 +250,30 @@ public class BookingService {
      * @throws com.smartcampus.backend.exception.UnauthorizedException if user doesn't own booking
      */
     public void deleteBooking(String id, String currentUserId) {
-        log.debug("Deleting booking '{}' by user '{}'", id, currentUserId);
+        log.debug("User action (Cancel/Delete) on booking '{}' by user '{}'", id, currentUserId);
 
         Booking booking = bookingRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Booking", "id", id));
 
-        log.debug("Found booking '{}' with studentId '{}'. Current user is '{}'", id, booking.getStudentId(), currentUserId);
-        
         if (!booking.getStudentId().equals(currentUserId)) {
             log.warn("Unauthorized delete attempt: booking owner is '{}', requester is '{}'", booking.getStudentId(), currentUserId);
             throw new com.smartcampus.backend.exception.UnauthorizedException("You do not have permission to delete this booking");
         }
 
-        if (booking.getStatus() != BookingStatus.PENDING && booking.getStatus() != BookingStatus.APPROVED) {
-            log.warn("Invalid cancel attempt: booking '{}' status is {}", id, booking.getStatus());
-            throw new IllegalArgumentException("Only PENDING or APPROVED bookings can be cancelled");
+        // If it's already CANCELLED or REJECTED, permanently delete it
+        if (booking.getStatus() == BookingStatus.CANCELLED || booking.getStatus() == BookingStatus.REJECTED) {
+            bookingRepository.deleteById(id);
+            log.info("Booking '{}' permanently deleted by owner", id);
+        } 
+        // If it's PENDING or APPROVED, change to CANCELLED (soft delete)
+        else if (booking.getStatus() == BookingStatus.PENDING || booking.getStatus() == BookingStatus.APPROVED) {
+            booking.setStatus(BookingStatus.CANCELLED);
+            bookingRepository.save(booking);
+            log.info("Booking '{}' cancelled (status set to CANCELLED)", id);
+        } else {
+            log.warn("Invalid delete attempt: booking '{}' status is {}", id, booking.getStatus());
+            throw new IllegalArgumentException("Only PENDING, APPROVED, CANCELLED or REJECTED bookings can be processed.");
         }
-
-        booking.setStatus(BookingStatus.CANCELLED);
-        bookingRepository.save(booking);
-        log.info("Booking '{}' cancelled successfully", id);
     }
 
     /**

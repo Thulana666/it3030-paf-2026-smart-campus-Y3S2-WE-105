@@ -15,10 +15,10 @@ import java.util.List;
  * to make cross-origin requests to all {@code /api/**} endpoints.
  * In production this should be updated to the deployed frontend origin.</p>
  */
-@Configuration
+// @Configuration
 public class CorsConfig {
 
-    @Bean
+    // @Bean
     public CorsFilter corsFilter() {
         CorsConfiguration config = new CorsConfiguration();
 

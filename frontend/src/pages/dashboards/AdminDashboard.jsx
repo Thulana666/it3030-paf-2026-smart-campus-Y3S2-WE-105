@@ -1,28 +1,10 @@
-import React, { useContext, useState, useEffect } from 'react';
+import React, { useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
-import { getAllBookings } from '../../services/bookingService';
 
 const AdminDashboard = () => {
   const { user } = useContext(AuthContext);
   const navigate = useNavigate();
-  const [pendingCount, setPendingCount] = useState(0);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const bookings = await getAllBookings();
-        const pending = (bookings || []).filter(b => b.status === 'PENDING').length;
-        setPendingCount(pending);
-      } catch (err) {
-        console.error("Failed to fetch dashboard stats", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchStats();
-  }, []);
 
   return (
     <div className="page-container" style={{ animation: 'slideUp 0.5s ease backwards' }}>
@@ -53,20 +35,37 @@ const AdminDashboard = () => {
           </div>
         </div>
 
-        {/* Facility Oversight Card */}
+        {/* Facility Management Card */}
         <div className="card glass" style={{ padding: '2rem', borderRadius: '15px', display: 'flex', flexDirection: 'column', gap: '1rem', transition: 'transform 0.2s', cursor: 'default' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div style={{ background: 'rgba(139, 92, 246, 0.1)', padding: '12px', borderRadius: '12px', color: 'var(--general-color)' }}>
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
             </div>
+            <h3 style={{ fontSize: '1.3rem', color: 'var(--text-dark)' }}>Facility Management</h3>
+          </div>
+          <p style={{ color: 'var(--text-muted)', flex: 1 }}>Create, manage, and maintain campus facilities and resources. Add new facilities, update details, and manage resource availability.</p>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto' }}>
+            <span className="badge badge-general" style={{ color: '#8b5cf6', background: 'rgba(139,92,246,0.1)' }}>Full CRUD</span>
+            <button onClick={() => navigate('/dashboard/facilities')} className="btn btn-outline" style={{ padding: '0.4rem 1rem' }}>Manage</button>
+          </div>
+        </div>
+
+        {/* Booking Management Card */}
+        <div className="card glass" style={{ padding: '2rem', borderRadius: '15px', display: 'flex', flexDirection: 'column', gap: '1rem', transition: 'transform 0.2s', cursor: 'default' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ background: 'rgba(79, 70, 229, 0.1)', padding: '12px', borderRadius: '12px', color: 'var(--primary-color)' }}>
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+            </div>
             <h3 style={{ fontSize: '1.3rem', color: 'var(--text-dark)' }}>Booking Management</h3>
           </div>
-          <p style={{ color: 'var(--text-muted)', flex: 1 }}>Monitor and oversee all facility reservation requests across the campus.</p>
+          <p style={{ color: 'var(--text-muted)', flex: 1 }}>
+            Review and monitor facility approval requests and operational oversight from one place.
+          </p>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto' }}>
-            <span className="badge badge-general" style={{ color: '#8b5cf6', background: 'rgba(139,92,246,0.1)' }}>
-              {loading ? '...' : `${pendingCount} Pending`}
-            </span>
-            <button onClick={() => navigate('/dashboard/facility-approvals')} className="btn btn-outline" style={{ padding: '0.4rem 1rem' }}>Approvals</button>
+            <span className="badge badge-general" style={{ color: '#4f46e5', background: 'rgba(79,70,229,0.1)' }}>Approvals</span>
+            <button onClick={() => navigate('/dashboard/facility-approvals')} className="btn btn-outline" style={{ padding: '0.4rem 1rem' }}>
+              Open
+            </button>
           </div>
         </div>
 
