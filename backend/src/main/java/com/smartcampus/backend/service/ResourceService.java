@@ -140,7 +140,7 @@ public class ResourceService {
 
     // Hard delete (permanently delete from database)
     public void hardDeleteResource(String id) {
-        Resource resource = getResourceById(id); // Check if exists first
+        getResourceById(id); // Check if exists first
         resourceRepository.deleteById(id);
     }
 

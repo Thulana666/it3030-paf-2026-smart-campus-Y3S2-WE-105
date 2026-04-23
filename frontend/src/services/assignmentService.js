@@ -38,15 +38,23 @@ export const assignResource = async (assignmentData) => {
   return response.data;
 };
 
-// Update assignment status
-export const updateAssignmentStatus = async (assignmentId, status) => {
-  const response = await api.patch(`${ASSIGNMENT_BASE_URL}/${assignmentId}/status`, { status });
+// Update repair progress (TECHNICIAN/ADMIN)
+export const updateRepairProgress = async (assignmentId, progressStatus, notes) => {
+  const payload = {};
+  if (typeof progressStatus === 'string' && progressStatus.trim()) {
+    payload.progressStatus = progressStatus;
+  }
+  if (typeof notes === 'string' && notes.trim()) {
+    payload.notes = notes;
+  }
+
+  const response = await api.patch(`${ASSIGNMENT_BASE_URL}/${assignmentId}/progress`, payload);
   return response.data;
 };
 
-// Update assignment notes
-export const updateAssignmentNotes = async (assignmentId, notes) => {
-  const response = await api.patch(`${ASSIGNMENT_BASE_URL}/${assignmentId}/notes`, { notes });
+// Append a single repair note line (TECHNICIAN/ADMIN)
+export const appendRepairNote = async (assignmentId, note) => {
+  const response = await api.patch(`${ASSIGNMENT_BASE_URL}/${assignmentId}/notes/append`, { note });
   return response.data;
 };
 

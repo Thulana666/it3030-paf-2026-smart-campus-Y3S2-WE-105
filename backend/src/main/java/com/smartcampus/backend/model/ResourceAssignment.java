@@ -26,6 +26,9 @@ public class ResourceAssignment {
     private String priority; // LOW, MEDIUM, HIGH, CRITICAL
     
     private String status; // ASSIGNED, IN_PROGRESS, COMPLETED, CANCELLED
+
+    // Technician-facing repair progress status (INSPECTING, PARTS_ORDERED, IN_PROGRESS, WAITING_APPROVAL, COMPLETED)
+    private String progressStatus;
     
     private LocalDateTime assignedDate;
     
@@ -130,6 +133,15 @@ public class ResourceAssignment {
 
     public void setStatus(String status) {
         this.status = status;
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    public String getProgressStatus() {
+        return progressStatus;
+    }
+
+    public void setProgressStatus(String progressStatus) {
+        this.progressStatus = progressStatus;
         this.updatedAt = LocalDateTime.now();
     }
 

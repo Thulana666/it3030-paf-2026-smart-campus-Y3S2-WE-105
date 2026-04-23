@@ -1,8 +1,6 @@
 package com.smartcampus.backend.service;
 
-import com.smartcampus.backend.model.Resource;
 import com.smartcampus.backend.model.ResourceAssignment;
-import com.smartcampus.backend.model.User;
 import com.smartcampus.backend.repository.ResourceAssignmentRepository;
 import com.smartcampus.backend.repository.ResourceRepository;
 import com.smartcampus.backend.exception.ResourceNotFoundException;
@@ -26,7 +24,7 @@ public class ResourceAssignmentService {
                                                        String issueType, String description, 
                                                        String priority, LocalDateTime dueDate) {
         // Verify resource exists
-        Resource resource = resourceRepository.findById(resourceId)
+        resourceRepository.findById(resourceId)
                 .orElseThrow(() -> new ResourceNotFoundException("Resource not found"));
 
         ResourceAssignment assignment = new ResourceAssignment(
@@ -55,23 +53,57 @@ public class ResourceAssignmentService {
         return assignmentRepository.findByResourceId(resourceId);
     }
 
-    public ResourceAssignment updateAssignmentStatus(String assignmentId, String status) {
+    private String mapProgressToAssignmentStatus(String progressStatus) {
+        if (progressStatus == null) return null;
+        if ("COMPLETED".equalsIgnoreCase(progressStatus)) return "COMPLETED";
+        return "IN_PROGRESS";
+    }
+
+    public ResourceAssignment updateRepairProgress(String assignmentId, String progressStatus, String notes) {
         ResourceAssignment assignment = assignmentRepository.findById(assignmentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Assignment not found"));
 
-        assignment.setStatus(status);
-        if ("COMPLETED".equals(status)) {
-            assignment.setCompletedDate(LocalDateTime.now());
+        boolean updated = false;
+        
+        if (progressStatus != null && !progressStatus.isBlank()) {
+            assignment.setProgressStatus(progressStatus);
+            String backendStatus = mapProgressToAssignmentStatus(progressStatus);
+            if (backendStatus != null) {
+                assignment.setStatus(backendStatus);
+                if ("COMPLETED".equals(backendStatus)) {
+                    assignment.setCompletedDate(LocalDateTime.now());
+                }
+            }
+            updated = true;
+        }
+
+        if (notes != null && !notes.isBlank()) {
+            assignment.setNotes(notes);
+            updated = true;
+        }
+
+        if (updated) {
+            assignment.setUpdatedAt(LocalDateTime.now());
         }
 
         return assignmentRepository.save(assignment);
     }
 
-    public ResourceAssignment updateAssignmentNotes(String assignmentId, String notes) {
+    public ResourceAssignment appendRepairNote(String assignmentId, String note) {
         ResourceAssignment assignment = assignmentRepository.findById(assignmentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Assignment not found"));
 
-        assignment.setNotes(notes);
+        String trimmed = note == null ? "" : note.trim();
+        if (trimmed.isEmpty()) {
+            return assignment;
+        }
+
+        String existing = assignment.getNotes();
+        if (existing == null || existing.trim().isEmpty()) {
+            assignment.setNotes(trimmed);
+        } else {
+            assignment.setNotes((existing.trim() + "\n" + trimmed).trim());
+        }
         assignment.setUpdatedAt(LocalDateTime.now());
 
         return assignmentRepository.save(assignment);

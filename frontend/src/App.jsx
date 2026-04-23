@@ -14,7 +14,10 @@ import DashboardLayout from './components/DashboardLayout';
 import BookingSystem from './pages/modules/BookingSystem';
 import Facilities from './pages/modules/Facilities';
 import IncidentTickets from './pages/modules/IncidentTickets';
+import OperationalSchedule from './pages/modules/OperationalSchedule';
+import RepairProgress from './pages/modules/RepairProgress';
 import UserManagement from './pages/admin/UserManagement';
+import ActivationRequests from './pages/admin/ActivationRequests';
 
 function App() {
   return (
@@ -37,7 +40,10 @@ function App() {
                 <Route path="bookings" element={<BookingSystem />} />
                 <Route path="facilities" element={<Facilities />} />
                 <Route path="incident-tickets" element={<IncidentTickets />} />
+                <Route path="schedule" element={<ProtectedRoute allowedRoles={['TECHNICIAN']}><OperationalSchedule /></ProtectedRoute>} />
+                <Route path="repair-progress" element={<RepairProgress />} />
                 <Route path="users" element={<ProtectedRoute allowedRoles={['ADMIN']}><UserManagement /></ProtectedRoute>} />
+                <Route path="activation-requests" element={<ProtectedRoute allowedRoles={['ADMIN']}><ActivationRequests /></ProtectedRoute>} />
               </Route>
               
               <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />

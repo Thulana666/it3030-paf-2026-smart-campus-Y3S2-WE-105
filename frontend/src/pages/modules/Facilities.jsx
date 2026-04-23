@@ -1,4 +1,5 @@
 import React, { useState, useContext, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
 import * as resourceService from '../../services/resourceService';
 import * as assignmentService from '../../services/assignmentService';
@@ -8,6 +9,7 @@ import ImageGallery from '../../components/ImageGallery';
 
 const Facilities = () => {
   const { user } = useContext(AuthContext);
+  const navigate = useNavigate();
   const [view, setView] = useState('list'); // list, create, edit, details, or assigned-repairs
   const [selectedResource, setSelectedResource] = useState(null);
   const [resources, setResources] = useState([]);
@@ -124,28 +126,6 @@ const Facilities = () => {
       setMessage({ type: 'error', text: 'Failed to load assigned repairs' });
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleUpdateAssignmentStatus = async (assignmentId, newStatus) => {
-    try {
-      await assignmentService.updateAssignmentStatus(assignmentId, newStatus);
-      setMessage({ type: 'success', text: `Assignment status updated to ${newStatus}` });
-      loadAssignedRepairs();
-    } catch (err) {
-      console.error('Error updating assignment status:', err);
-      setMessage({ type: 'error', text: 'Failed to update assignment status' });
-    }
-  };
-
-  const handleAddAssignmentNotes = async (assignmentId, notes) => {
-    try {
-      await assignmentService.updateAssignmentNotes(assignmentId, notes);
-      setMessage({ type: 'success', text: 'Notes added successfully' });
-      loadAssignedRepairs();
-    } catch (err) {
-      console.error('Error adding notes:', err);
-      setMessage({ type: 'error', text: 'Failed to add notes' });
     }
   };
 
@@ -2092,59 +2072,19 @@ const Facilities = () => {
                       </div>
                     )}
 
-                    {/* Action Buttons */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-                      <button
-                        onClick={() => {
-                          const newStatus = assignment.status === 'ASSIGNED' ? 'IN_PROGRESS' :
-                            assignment.status === 'IN_PROGRESS' ? 'COMPLETED' :
-                              assignment.status;
-                          if (newStatus !== assignment.status) {
-                            handleUpdateAssignmentStatus(assignment.id, newStatus);
-                          }
-                        }}
-                        style={{
-                          padding: '0.6rem 1rem',
-                          background: getPriorityColor(assignment.priority),
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '8px',
-                          cursor: 'pointer',
-                          fontSize: '0.85rem',
-                          fontWeight: '600',
-                          transition: 'opacity 0.2s'
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.opacity = '0.9'}
-                        onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
-                        disabled={assignment.status === 'COMPLETED' || assignment.status === 'CANCELLED'}
-                      >
-                        {assignment.status === 'ASSIGNED' ? 'Start Work' :
-                          assignment.status === 'IN_PROGRESS' ? 'Mark Complete' :
-                            'Completed'}
-                      </button>
-                      <button
-                        onClick={() => {
-                          const notes = prompt('Add repair notes:', assignment.notes || '');
-                          if (notes !== null) {
-                            handleAddAssignmentNotes(assignment.id, notes);
-                          }
-                        }}
-                        style={{
-                          padding: '0.6rem 1rem',
-                          background: '#3b82f6',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '8px',
-                          cursor: 'pointer',
-                          fontSize: '0.85rem',
-                          fontWeight: '600',
-                          transition: 'opacity 0.2s'
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.opacity = '0.9'}
-                        onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
-                      >
-                        📝 Add Notes
-                      </button>
+                    {/* Updates disabled */}
+                    <div
+                      style={{
+                        padding: '0.75rem',
+                        borderRadius: '10px',
+                        background: 'rgba(99,102,241,0.06)',
+                        border: '1px solid rgba(99,102,241,0.18)',
+                        color: 'var(--text-muted)',
+                        fontSize: '0.9rem',
+                        fontWeight: 600
+                      }}
+                    >
+                      Assignment updates are disabled.
                     </div>
                   </div>
                 </div>
@@ -2268,6 +2208,19 @@ const Facilities = () => {
                 }}
               >
                 📋 My Assigned Repairs
+              </button>
+            )}
+            {isMaintenanceView && (
+              <button
+                onClick={() => navigate('/dashboard/repair-progress')}
+                className="btn btn-outline"
+                style={{
+                  padding: '0.75rem 1.5rem',
+                  borderColor: 'var(--primary-color)',
+                  color: 'var(--primary-color)'
+                }}
+              >
+                🗂️ Repair Progress Records
               </button>
             )}
             {isAdmin && (

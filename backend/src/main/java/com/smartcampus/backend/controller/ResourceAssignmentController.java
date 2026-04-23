@@ -3,6 +3,7 @@ package com.smartcampus.backend.controller;
 import com.smartcampus.backend.model.ResourceAssignment;
 import com.smartcampus.backend.model.User;
 import com.smartcampus.backend.dto.AssignResourceRequest;
+import com.smartcampus.backend.repository.UserRepository;
 import com.smartcampus.backend.service.ResourceAssignmentService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -21,28 +22,38 @@ public class ResourceAssignmentController {
     @Autowired
     private ResourceAssignmentService assignmentService;
 
+    @Autowired
+    private UserRepository userRepository;
+
+    private String resolveTechnicianId(Authentication authentication) {
+        String email = authentication.getName();
+        return userRepository.findByEmail(email)
+                .map(User::getId)
+                .orElse(email);
+    }
+
     // Get all assignments for current technician
     @GetMapping("/my-assignments")
     @PreAuthorize("hasRole('TECHNICIAN')")
     public ResponseEntity<List<ResourceAssignment>> getMyAssignments(Authentication authentication) {
-        User currentUser = (User) authentication.getPrincipal();
-        return ResponseEntity.ok(assignmentService.getTechnicianAssignments(currentUser.getId()));
+        String technicianId = resolveTechnicianId(authentication);
+        return ResponseEntity.ok(assignmentService.getTechnicianAssignments(technicianId));
     }
 
     // Get active assignments for current technician
     @GetMapping("/my-assignments/active")
     @PreAuthorize("hasRole('TECHNICIAN')")
     public ResponseEntity<List<ResourceAssignment>> getMyActiveAssignments(Authentication authentication) {
-        User currentUser = (User) authentication.getPrincipal();
-        return ResponseEntity.ok(assignmentService.getActiveTechnicianAssignments(currentUser.getId()));
+        String technicianId = resolveTechnicianId(authentication);
+        return ResponseEntity.ok(assignmentService.getActiveTechnicianAssignments(technicianId));
     }
 
     // Get in-progress assignments for current technician
     @GetMapping("/my-assignments/in-progress")
     @PreAuthorize("hasRole('TECHNICIAN')")
     public ResponseEntity<List<ResourceAssignment>> getMyInProgressAssignments(Authentication authentication) {
-        User currentUser = (User) authentication.getPrincipal();
-        return ResponseEntity.ok(assignmentService.getInProgressAssignments(currentUser.getId()));
+        String technicianId = resolveTechnicianId(authentication);
+        return ResponseEntity.ok(assignmentService.getInProgressAssignments(technicianId));
     }
 
     // Get all assignments for a specific technician (ADMIN only)
@@ -80,29 +91,36 @@ public class ResourceAssignmentController {
         }
     }
 
-    // Update assignment status (TECHNICIAN and ADMIN)
-    @PatchMapping("/{assignmentId}/status")
+    // Update repair progress + optionally replace notes (TECHNICIAN and ADMIN)
+    @PatchMapping("/{assignmentId}/progress")
     @PreAuthorize("hasAnyRole('ADMIN', 'TECHNICIAN')")
-    public ResponseEntity<?> updateStatus(@PathVariable String assignmentId, @RequestBody Map<String, String> request) {
+    public ResponseEntity<?> updateRepairProgress(
+            @PathVariable String assignmentId,
+            @RequestBody Map<String, String> request
+    ) {
         try {
-            String status = request.get("status");
-            if (status == null || status.isEmpty()) {
-                return ResponseEntity.badRequest().body(Map.of("error", "Status is required"));
-            }
-            ResourceAssignment updated = assignmentService.updateAssignmentStatus(assignmentId, status);
+            String progressStatus = request.get("progressStatus");
+            String notes = request.get("notes"); // full notes replacement (optional)
+            ResourceAssignment updated = assignmentService.updateRepairProgress(assignmentId, progressStatus, notes);
             return ResponseEntity.ok(updated);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
 
-    // Update assignment notes (TECHNICIAN and ADMIN)
-    @PatchMapping("/{assignmentId}/notes")
+    // Append a single repair note line (TECHNICIAN and ADMIN)
+    @PatchMapping("/{assignmentId}/notes/append")
     @PreAuthorize("hasAnyRole('ADMIN', 'TECHNICIAN')")
-    public ResponseEntity<?> updateNotes(@PathVariable String assignmentId, @RequestBody Map<String, String> request) {
+    public ResponseEntity<?> appendRepairNote(
+            @PathVariable String assignmentId,
+            @RequestBody Map<String, String> request
+    ) {
         try {
-            String notes = request.get("notes");
-            ResourceAssignment updated = assignmentService.updateAssignmentNotes(assignmentId, notes);
+            String note = request.get("note");
+            if (note == null || note.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Note is required"));
+            }
+            ResourceAssignment updated = assignmentService.appendRepairNote(assignmentId, note);
             return ResponseEntity.ok(updated);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
