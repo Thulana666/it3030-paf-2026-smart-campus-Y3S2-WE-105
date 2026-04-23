@@ -35,6 +35,7 @@ export default function BookingList({
   currentUserId,
   resources = [] 
 }) {
+  // Optimization: Map resources by ID for O(1) lookup during list rendering
   const resourceMap = resources.reduce((acc, r) => {
     acc[r.id] = r;
     return acc;
