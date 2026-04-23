@@ -20,6 +20,7 @@ const Facilities = () => {
   const [selectedImageModal, setSelectedImageModal] = useState(null);
   const [editingResourceId, setEditingResourceId] = useState(null);
   const [showImageUploadModal, setShowImageUploadModal] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState({ show: false, resourceId: null, resourceName: '' });
 
   const isAdmin = user?.role === 'ADMIN';
   const isTechnician = user?.role === 'TECHNICIAN';
@@ -263,20 +264,24 @@ const Facilities = () => {
     setMessage({ type: '', text: '' });
   };
 
-  const handleDelete = async (resourceId, resourceName) => {
-    if (window.confirm(`Are you sure you want to permanently delete "${resourceName}"? This action cannot be undone.`)) {
-      try {
-        setLoading(true);
-        await resourceService.hardDeleteResource(resourceId);
-        setMessage({ type: 'success', text: 'Resource permanently deleted!' });
-        await loadResources();
-      } catch (err) {
-        const errorMsg = err.response?.data?.error || 'Failed to delete resource';
-        setMessage({ type: 'error', text: errorMsg });
-        console.error('Error deleting resource:', err);
-      } finally {
-        setLoading(false);
-      }
+  const handleDelete = (resourceId, resourceName) => {
+    setDeleteConfirm({ show: true, resourceId, resourceName });
+  };
+
+  const confirmDelete = async () => {
+    const { resourceId } = deleteConfirm;
+    setDeleteConfirm({ show: false, resourceId: null, resourceName: '' });
+    try {
+      setLoading(true);
+      await resourceService.hardDeleteResource(resourceId);
+      setMessage({ type: 'success', text: 'Resource permanently deleted!' });
+      await loadResources();
+    } catch (err) {
+      const errorMsg = err.response?.data?.error || 'Failed to delete resource';
+      setMessage({ type: 'error', text: errorMsg });
+      console.error('Error deleting resource:', err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -2955,6 +2960,163 @@ const Facilities = () => {
                   style={{ flex: 1 }}
                 >
                   Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Confirmation Modal */}
+        {deleteConfirm.show && (
+          <div
+            onClick={() => setDeleteConfirm({ show: false, resourceId: null, resourceName: '' })}
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(0, 0, 0, 0.5)',
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 10000,
+              animation: 'fadeIn 0.25s ease'
+            }}
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                background: 'rgba(255, 255, 255, 0.95)',
+                backdropFilter: 'blur(20px)',
+                WebkitBackdropFilter: 'blur(20px)',
+                borderRadius: '20px',
+                padding: '2.5rem',
+                width: '90%',
+                maxWidth: '440px',
+                boxShadow: '0 25px 60px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(239, 68, 68, 0.1)',
+                animation: 'slideUp 0.35s ease',
+                textAlign: 'center'
+              }}
+            >
+              {/* Warning Icon */}
+              <div style={{
+                width: '72px',
+                height: '72px',
+                borderRadius: '50%',
+                background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(239, 68, 68, 0.2) 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 1.5rem auto',
+                border: '2px solid rgba(239, 68, 68, 0.15)',
+                animation: 'pulse-glow 2s infinite'
+              }}>
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="3 6 5 6 21 6"></polyline>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                  <line x1="10" y1="11" x2="10" y2="17"></line>
+                  <line x1="14" y1="11" x2="14" y2="17"></line>
+                </svg>
+              </div>
+
+              {/* Title */}
+              <h2 style={{
+                margin: '0 0 0.75rem 0',
+                fontSize: '1.4rem',
+                fontWeight: '700',
+                color: '#1a1a2e'
+              }}>
+                Delete Resource
+              </h2>
+
+              {/* Message */}
+              <p style={{
+                margin: '0 0 0.5rem 0',
+                color: '#64748b',
+                fontSize: '0.95rem',
+                lineHeight: '1.6'
+              }}>
+                Are you sure you want to permanently delete
+              </p>
+              <p style={{
+                margin: '0 0 1rem 0',
+                color: '#1a1a2e',
+                fontSize: '1.1rem',
+                fontWeight: '700',
+                padding: '0.5rem 1rem',
+                background: 'rgba(239, 68, 68, 0.06)',
+                borderRadius: '8px',
+                display: 'inline-block',
+                border: '1px solid rgba(239, 68, 68, 0.1)'
+              }}>
+                "{deleteConfirm.resourceName}"
+              </p>
+              <p style={{
+                margin: '0 0 2rem 0',
+                color: '#ef4444',
+                fontSize: '0.85rem',
+                fontWeight: '500'
+              }}>
+                ⚠️ This action cannot be undone.
+              </p>
+
+              {/* Action Buttons */}
+              <div style={{ display: 'flex', gap: '1rem' }}>
+                <button
+                  onClick={() => setDeleteConfirm({ show: false, resourceId: null, resourceName: '' })}
+                  style={{
+                    flex: 1,
+                    padding: '0.85rem 1.5rem',
+                    background: 'rgba(99, 102, 241, 0.08)',
+                    border: '1px solid rgba(99, 102, 241, 0.2)',
+                    color: 'var(--primary-color)',
+                    borderRadius: '12px',
+                    cursor: 'pointer',
+                    fontWeight: '600',
+                    fontSize: '0.95rem',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'rgba(99, 102, 241, 0.15)';
+                    e.currentTarget.style.transform = 'translateY(-1px)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'rgba(99, 102, 241, 0.08)';
+                    e.currentTarget.style.transform = 'translateY(0)';
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  style={{
+                    flex: 1,
+                    padding: '0.85rem 1.5rem',
+                    background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                    border: 'none',
+                    color: 'white',
+                    borderRadius: '12px',
+                    cursor: 'pointer',
+                    fontWeight: '600',
+                    fontSize: '0.95rem',
+                    transition: 'all 0.2s ease',
+                    boxShadow: '0 4px 15px rgba(239, 68, 68, 0.3)'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)';
+                    e.currentTarget.style.transform = 'translateY(-1px)';
+                    e.currentTarget.style.boxShadow = '0 6px 20px rgba(239, 68, 68, 0.4)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = '0 4px 15px rgba(239, 68, 68, 0.3)';
+                  }}
+                >
+                  🗑️ Delete
                 </button>
               </div>
             </div>
