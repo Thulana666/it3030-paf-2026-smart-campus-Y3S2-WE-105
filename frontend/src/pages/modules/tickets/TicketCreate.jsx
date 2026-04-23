@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ticketService } from '../../../services/ticketService';
+import { resourceService } from '../../../services/resourceService';
 
 const CATEGORIES = ['Hardware', 'Software', 'Network', 'Electrical', 'Plumbing', 'Security', 'Cleaning', 'Other'];
 const PRIORITIES = ['LOW', 'MEDIUM', 'HIGH', 'URGENT'];
@@ -74,6 +75,19 @@ const TicketCreate = () => {
   const [errors,   setErrors]   = useState({});
   const [loading,  setLoading]  = useState(false);
   const [apiError, setApiError] = useState(null);
+  const [resources, setResources] = useState([]);
+
+  useEffect(() => {
+    const fetchResources = async () => {
+      try {
+        const data = await resourceService.getAllResources();
+        setResources(data);
+      } catch (err) {
+        console.error('Failed to fetch resources:', err);
+      }
+    };
+    fetchResources();
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -266,14 +280,19 @@ const TicketCreate = () => {
           {/* Resource ID */}
           <div className="form-group">
             <label htmlFor="resourceId">Resource / Asset ID <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>(optional)</span></label>
-            <input
+            <select
               id="resourceId"
               name="resourceId"
-              type="text"
               value={fields.resourceId}
               onChange={handleChange}
-              placeholder="e.g. PC-101, Room A204"
-            />
+            >
+              <option value="">— Select a resource (optional) —</option>
+              {resources.map((res) => (
+                <option key={res._id} value={res._id}>
+                  {res.name || res.identifier || res._id} {res.type ? `(${res.type})` : ''} {res.location ? `- ${res.location}` : ''}
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* Image attachments */}
