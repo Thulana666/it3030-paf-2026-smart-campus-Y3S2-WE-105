@@ -31,7 +31,8 @@ export default function BookingSystem() {
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [resources, setResources] = useState([]);
 
-  const studentId = user?.id || user?.email || '';
+  // Always use email as the identifier so it displays correctly on the admin dashboard
+  const studentId = user?.email || '';
 
   const showToast = (msg, type = 'success') => {
     setToast({ msg, type });

@@ -2,9 +2,9 @@ package com.smartcampus.backend.service;
 
 import com.smartcampus.backend.exception.BookingConflictException;
 import com.smartcampus.backend.exception.ResourceNotFoundException;
-import com.smartcampus.backend.model.Booking;
-import com.smartcampus.backend.model.BookingStatus;
+import com.smartcampus.backend.model.*;
 import com.smartcampus.backend.repository.BookingRepository;
+import com.smartcampus.backend.repository.UserRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -26,10 +26,34 @@ public class BookingService {
 
     private final BookingRepository bookingRepository;
     private final com.smartcampus.backend.repository.ResourceRepository resourceRepository;
+    private final NotificationService notificationService;
+    private final UserRepository userRepository;
 
-    public BookingService(BookingRepository bookingRepository, com.smartcampus.backend.repository.ResourceRepository resourceRepository) {
+    public BookingService(BookingRepository bookingRepository,
+                          com.smartcampus.backend.repository.ResourceRepository resourceRepository,
+                          NotificationService notificationService,
+                          UserRepository userRepository) {
         this.bookingRepository = bookingRepository;
         this.resourceRepository = resourceRepository;
+        this.notificationService = notificationService;
+        this.userRepository = userRepository;
+    }
+
+    /**
+     * Resolves a studentId (which may be a MongoDB ObjectId OR an email address)
+     * to the correct MongoDB user document ID required for notifications.
+     * Falls back gracefully — returns the original value if lookup fails.
+     */
+    private String resolveUserId(String studentId) {
+        if (studentId == null || studentId.isBlank()) return studentId;
+        // If it looks like an email, look up by email
+        if (studentId.contains("@")) {
+            return userRepository.findByEmail(studentId)
+                    .map(User::getId)
+                    .orElse(studentId);
+        }
+        // Otherwise assume it's already a MongoDB ID
+        return studentId;
     }
 
     // -----------------------------------------------------------------------
@@ -83,6 +107,18 @@ public class BookingService {
         Booking saved = bookingRepository.save(booking);
         log.info("Booking created successfully with id '{}' for resource '{}'",
                 saved.getId(), saved.getResourceId());
+
+        // ── Notify all ADMINs of new booking request ──────────────────────
+        try {
+            String resourceName = resource.getName() != null ? resource.getName() : saved.getResourceId();
+            String adminMsg = "📅 New booking request for \"" + resourceName + "\" is awaiting your approval.";
+            userRepository.findByRole(Role.ADMIN).forEach(admin ->
+                notificationService.createNotification(admin.getId(), adminMsg, NotificationType.BOOKING)
+            );
+        } catch (Exception e) {
+            log.warn("Failed to send admin notifications for new booking '{}': {}", saved.getId(), e.getMessage());
+        }
+
         return saved;
     }
 
@@ -160,9 +196,42 @@ public class BookingService {
                 for (Booking pb : overlappingPending) {
                     pb.setStatus(BookingStatus.REJECTED);
                     pb.setAdminReason("Automated conflict resolution: Another request for this time slot was approved.");
+                    // Notify rejected user
+                    try {
+                        String rejectedUserId = resolveUserId(pb.getStudentId());
+                        notificationService.createNotification(
+                            rejectedUserId,
+                            "❌ Your booking request was rejected — another booking for the same slot was approved.",
+                            NotificationType.BOOKING
+                        );
+                    } catch (Exception e) {
+                        log.warn("Failed to notify student '{}' of auto-rejection: {}", pb.getStudentId(), e.getMessage());
+                    }
                 }
                 bookingRepository.saveAll(overlappingPending);
             }
+        }
+
+        // ── Notify the booking owner of the status change ─────────────────
+        try {
+            // Resolve studentId to a real MongoDB user ID (in case it was stored as email)
+            String targetUserId = resolveUserId(updated.getStudentId());
+            String userMsg;
+            if (newStatus == BookingStatus.APPROVED) {
+                userMsg = "✅ Your booking request has been APPROVED."
+                        + (reason != null && !reason.isBlank() ? " Note: " + reason : "");
+            } else if (newStatus == BookingStatus.REJECTED) {
+                userMsg = "❌ Your booking request has been REJECTED."
+                        + (reason != null && !reason.isBlank() ? " Reason: " + reason : "");
+            } else if (newStatus == BookingStatus.CANCELLED) {
+                userMsg = "🚫 Your booking has been CANCELLED."
+                        + (reason != null && !reason.isBlank() ? " Reason: " + reason : "");
+            } else {
+                userMsg = "ℹ️ Your booking status has been updated to " + newStatus + ".";
+            }
+            notificationService.createNotification(targetUserId, userMsg, NotificationType.BOOKING);
+        } catch (Exception e) {
+            log.warn("Failed to notify student of booking status change '{}': {}", id, e.getMessage());
         }
 
         return updated;

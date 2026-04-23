@@ -1,5 +1,6 @@
 package com.smartcampus.backend.service;
 
+import com.smartcampus.backend.model.NotificationType;
 import com.smartcampus.backend.model.ResourceAssignment;
 import com.smartcampus.backend.repository.ResourceAssignmentRepository;
 import com.smartcampus.backend.repository.ResourceRepository;
@@ -19,6 +20,9 @@ public class ResourceAssignmentService {
     @Autowired
     private ResourceRepository resourceRepository;
 
+    @Autowired
+    private NotificationService notificationService;
+
     public ResourceAssignment assignResourceToTechnician(String resourceId, String technicianId, 
                                                        String technicianName, String technicianEmail,
                                                        String issueType, String description, 
@@ -32,7 +36,19 @@ public class ResourceAssignmentService {
         );
         assignment.setDueDate(dueDate);
         
-        return assignmentRepository.save(assignment);
+        ResourceAssignment saved = assignmentRepository.save(assignment);
+
+        // ── Notify the technician of the new ticket assignment ────────────────
+        try {
+            String msg = "🔧 You have been assigned a new " + issueType + " ticket"
+                       + (description != null && !description.isBlank() ? ": " + description : "")
+                       + " [Priority: " + priority + "]";
+            notificationService.createNotification(technicianId, msg, NotificationType.TICKET);
+        } catch (Exception e) {
+            // Non-fatal — log and continue
+        }
+
+        return saved;
     }
 
     public List<ResourceAssignment> getTechnicianAssignments(String technicianId) {
