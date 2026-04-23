@@ -138,18 +138,41 @@ export default function BookingList({
               )}
             </div>
 
-            {/* Admin Reason if any */}
-            {b.adminReason && (
+            {/* Admin Feedback Section */}
+            {(b.status === 'APPROVED' || b.status === 'REJECTED' || b.adminReason) && (
               <div style={{ 
-                padding: '0.6rem 0.8rem', 
-                background: 'rgba(0,0,0,0.03)', 
-                borderRadius: '8px', 
-                fontSize: '0.75rem', 
-                color: '#555', 
+                marginTop: 'auto',
+                padding: '0.75rem 1rem', 
+                background: b.status === 'REJECTED' ? 'rgba(239, 68, 68, 0.05)' : 'rgba(16, 185, 129, 0.05)',
+                borderRadius: '12px', 
+                borderLeft: `4px solid ${meta.color}`,
                 marginBottom: '1rem',
-                borderLeft: '3px solid #cbd5e1'
+                border: `1px solid ${meta.color}22`,
+                position: 'relative',
+                overflow: 'hidden'
               }}>
-                <strong style={{ color: '#333' }}>Admin Note:</strong> {b.adminReason}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                  <span style={{ fontSize: '1rem' }}>💬</span>
+                  <span style={{ 
+                    fontSize: '0.65rem', 
+                    fontWeight: '800', 
+                    textTransform: 'uppercase', 
+                    letterSpacing: '0.05em',
+                    color: meta.color 
+                  }}>
+                    Admin Feedback
+                  </span>
+                </div>
+                <p style={{ 
+                  fontSize: '0.825rem', 
+                  color: 'var(--text-dark)', 
+                  lineHeight: '1.5', 
+                  margin: 0,
+                  fontWeight: '500',
+                  opacity: 0.9
+                }}>
+                  {b.adminReason ? b.adminReason : <span style={{ fontStyle: 'italic', opacity: 0.5 }}>No specific feedback from admin.</span>}
+                </p>
               </div>
             )}
 
