@@ -16,6 +16,8 @@ public class CommentResponse {
     private String id;
     private String ticketId;
     private String authorId;
+    private String authorName;   // Populated by TicketService from UserRepository
+    private String authorRole;   // "TECHNICIAN" | "USER" | "ADMIN"
     private String content;
     private LocalDateTime createdAt;
 
