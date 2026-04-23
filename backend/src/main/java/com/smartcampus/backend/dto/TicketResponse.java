@@ -24,7 +24,9 @@ public class TicketResponse {
     private TicketPriority priority;
     private TicketStatus status;
     private String createdBy;
+    private String createdByName;      // Enriched — student display name
     private String assignedTo;
+    private String assignedToName;     // Enriched — technician display name
     private String resourceId;
     private List<String> imagePaths;
     private String resolutionNotes;
@@ -52,3 +54,4 @@ public class TicketResponse {
                 .build();
     }
 }
+
