@@ -13,7 +13,9 @@ const NotificationDropdown = ({ onClose }) => {
     const fetchNotifs = async () => {
       try {
         const response = await api.get('/notifications');
-        const sorted = response.data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        const sorted = response.data
+          .filter(n => !n.read)
+          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
         setNotifications(sorted);
       } catch (e) {
         console.error('Failed to load notifications');
@@ -27,14 +29,14 @@ const NotificationDropdown = ({ onClose }) => {
   const handleMarkAsRead = async (id) => {
     try {
       await api.put(`/notifications/${id}/read`);
-      setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+      setNotifications(prev => prev.filter(n => n.id !== id));
     } catch (e) {}
   };
 
   const handleMarkAllRead = async () => {
     const unread = notifications.filter(n => !n.read);
     await Promise.allSettled(unread.map(n => api.put(`/notifications/${n.id}/read`)));
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    setNotifications([]);
   };
 
   const unreadCount = notifications.filter(n => !n.read).length;

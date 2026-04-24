@@ -22,6 +22,7 @@ import RepairProgress from './pages/modules/RepairProgress';
 import UserManagement from './pages/admin/UserManagement';
 import ActivationRequests from './pages/admin/ActivationRequests';
 import AdminBookingDashboard from './pages/admin/AdminBookingDashboard';
+import GlobalAnalytics from './pages/admin/GlobalAnalytics';
 import TicketCreate from './pages/modules/tickets/TicketCreate';
 import TicketDetail from './pages/modules/tickets/TicketDetail';
 import TicketEdit from './pages/modules/tickets/TicketEdit';
@@ -102,6 +103,7 @@ function App() {
                 <Route path="users" element={<ProtectedRoute allowedRoles={['ADMIN']}><UserManagement /></ProtectedRoute>} />
                 <Route path="activation-requests" element={<ProtectedRoute allowedRoles={['ADMIN']}><ActivationRequests /></ProtectedRoute>} />
                 <Route path="facility-approvals" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminBookingDashboard /></ProtectedRoute>} />
+                <Route path="analytics" element={<ProtectedRoute allowedRoles={['ADMIN']}><GlobalAnalytics /></ProtectedRoute>} />
               </Route>
 
               <Route
