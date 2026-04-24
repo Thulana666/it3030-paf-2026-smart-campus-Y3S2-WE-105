@@ -118,7 +118,7 @@ const TechnicianDashboard = () => {
           </div>
         </div>
 
-        {/* Inventory Hub Card */}
+        {/* Repair Progress Card */}
         <div
           className="card glass"
           style={{
@@ -150,18 +150,16 @@ const TechnicianDashboard = () => {
                 strokeLinecap="round"
                 strokeLinejoin="round"
               >
-                <path d="M21 8V20a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8"></path>
-                <path d="M1 3h22v5H1z"></path>
-                <path d="M10 12h4"></path>
+                <path d="M22 12h-4l-3 9L9 3l-3 9H2"></path>
               </svg>
             </div>
             <h3 style={{ fontSize: "1.3rem", color: "var(--text-dark)" }}>
-              Inventory & Stock
+              Repair Progress
             </h3>
           </div>
           <p style={{ color: "var(--text-muted)", flex: 1 }}>
-            Manage logistical supplies, track electrical component stock, and
-            oversee hardware parts inventory.
+            Track ongoing repairs, update progress status, and document
+            resolution steps for assigned maintenance tasks.
           </p>
           <div
             style={{
@@ -178,10 +176,10 @@ const TechnicianDashboard = () => {
                 color: "#3b82f6",
               }}
             >
-              Stable Levels
+              Active Repairs
             </span>
             <button
-              onClick={() => navigate("/dashboard/inventory")}
+              onClick={() => navigate("/dashboard/repair-progress")}
               className="btn btn-outline"
               style={{
                 padding: "0.4rem 1rem",
@@ -189,7 +187,7 @@ const TechnicianDashboard = () => {
                 color: "#3b82f6",
               }}
             >
-              Supplies
+              View Progress
             </button>
           </div>
         </div>
