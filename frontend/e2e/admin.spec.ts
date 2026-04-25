@@ -65,23 +65,6 @@ test.describe('Analytics Page', () => {
   });
 });
 
-test.describe('Activation Requests Page', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/login');
-    await page.evaluate(() => {
-      localStorage.setItem('token', 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbkBjYW1wdXMuZWR1Iiwicm9sZSI6IkFETUlOIiwiaWF0IjoxNzAwMDAwMDAwLCJleHAiOjk5OTk5OTk5OTl9.mock');
-      localStorage.setItem('user', JSON.stringify({ id: 'a1', name: 'Admin', email: 'admin@campus.edu', role: 'ADMIN' }));
-    });
-    await page.goto('/dashboard/activation-requests');
-  });
-
-  test('should render activation requests page', async ({ page }) => {
-    await page.waitForLoadState('networkidle');
-    const heading = page.getByRole('heading').first();
-    await expect(heading).toBeVisible({ timeout: 10000 });
-  });
-});
-
 test.describe('Role-Based Access Control', () => {
   test('non-admin user should not access admin-only pages', async ({ page }) => {
     await page.goto('/login');

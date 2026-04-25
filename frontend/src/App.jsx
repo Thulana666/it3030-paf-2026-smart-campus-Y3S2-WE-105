@@ -20,7 +20,6 @@ import OperationalSchedule from './pages/modules/OperationalSchedule';
 import OpsSchedule from './pages/modules/Schedule';
 import RepairProgress from './pages/modules/RepairProgress';
 import UserManagement from './pages/admin/UserManagement';
-import ActivationRequests from './pages/admin/ActivationRequests';
 import AdminBookingDashboard from './pages/admin/AdminBookingDashboard';
 import GlobalAnalytics from './pages/admin/GlobalAnalytics';
 import TicketCreate from './pages/modules/tickets/TicketCreate';
@@ -101,7 +100,6 @@ function App() {
 
                 {/* Admin-only routes */}
                 <Route path="users" element={<ProtectedRoute allowedRoles={['ADMIN']}><UserManagement /></ProtectedRoute>} />
-                <Route path="activation-requests" element={<ProtectedRoute allowedRoles={['ADMIN']}><ActivationRequests /></ProtectedRoute>} />
                 <Route path="facility-approvals" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminBookingDashboard /></ProtectedRoute>} />
                 <Route path="analytics" element={<ProtectedRoute allowedRoles={['ADMIN']}><GlobalAnalytics /></ProtectedRoute>} />
               </Route>
