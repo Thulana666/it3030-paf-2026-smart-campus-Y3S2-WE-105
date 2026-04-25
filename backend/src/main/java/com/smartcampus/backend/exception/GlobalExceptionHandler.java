@@ -62,6 +62,16 @@ public class GlobalExceptionHandler {
     }
 
     // -------------------------------------------------------
+    // 409 — Booking time-slot conflict
+    // -------------------------------------------------------
+
+    @ExceptionHandler(BookingConflictException.class)
+    public ResponseEntity<ErrorResponse> handleBookingConflict(BookingConflictException ex) {
+        log.warn("Booking conflict: {}", ex.getMessage());
+        return buildError(HttpStatus.CONFLICT, ex.getMessage());
+    }
+
+    // -------------------------------------------------------
     // 401 — Invalid credentials on login
     // -------------------------------------------------------
 
@@ -92,6 +102,15 @@ public class GlobalExceptionHandler {
         String cause = (ex.getCause() != null) ? " Cause: " + ex.getCause().getMessage() : "";
         return buildError(HttpStatus.INTERNAL_SERVER_ERROR,
                 "An unexpected error occurred: " + ex.getMessage() + cause);
+    }
+
+    // -------------------------------------------------------
+    // 403 — Unauthorized Action
+    // -------------------------------------------------------
+    @ExceptionHandler(UnauthorizedException.class)
+    public ResponseEntity<ErrorResponse> handleUnauthorizedAction(UnauthorizedException ex) {
+        log.warn("Access Denied: {}", ex.getMessage());
+        return buildError(HttpStatus.FORBIDDEN, ex.getMessage());
     }
 
     // -------------------------------------------------------

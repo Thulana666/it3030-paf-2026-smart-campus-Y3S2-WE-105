@@ -56,7 +56,7 @@ const AdminDashboard = () => {
             <div style={{ background: 'rgba(79, 70, 229, 0.1)', padding: '12px', borderRadius: '12px', color: 'var(--primary-color)' }}>
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
             </div>
-            <h3 style={{ fontSize: '1.3rem', color: 'var(--text-dark)' }}>Booking Managment</h3>
+            <h3 style={{ fontSize: '1.3rem', color: 'var(--text-dark)' }}>Booking Management</h3>
           </div>
           <p style={{ color: 'var(--text-muted)', flex: 1 }}>
             Review and monitor facility approval requests and operational oversight from one place.

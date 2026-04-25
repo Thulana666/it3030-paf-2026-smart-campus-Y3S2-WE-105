@@ -76,6 +76,7 @@ const Login = () => {
             theme="filled_blue"
             text="signin_with"
             shape="rectangular"
+            locale="en"
           />
         </div>
 

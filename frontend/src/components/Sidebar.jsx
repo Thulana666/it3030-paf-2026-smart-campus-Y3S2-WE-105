@@ -56,7 +56,6 @@ const NAV_CONFIG = {
         title: 'Operations',
         links: [
           { to: '/dashboard/incident-tickets', label: 'Assigned Tickets', icon: <><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></> },
-          { to: '/dashboard/inventory', label: 'Inventory & Stock', icon: <><path d="M21 8V20a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8"/><path d="M1 3h22v5H1z"/><path d="M10 12h4"/></> },
           { to: '/dashboard/schedule', label: 'Ops Schedule', icon: <><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></> },
           { to: '/dashboard/repair-progress', label: 'Repair Progress', icon: <><path d="M4 12h16"/><path d="M12 4v16"/><path d="M6 6l12 12"/></> },
         ],

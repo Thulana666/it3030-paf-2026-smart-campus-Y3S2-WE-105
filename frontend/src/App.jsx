@@ -1,35 +1,35 @@
-import {
-  BrowserRouter as Router,
-  Routes,
-  Route,
-  Navigate,
-} from "react-router-dom";
-import { AuthProvider } from "./context/AuthContext";
-import ProtectedRoute from "./components/ProtectedRoute";
-import Navbar from "./components/Navbar";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
-import Notifications from "./pages/Notifications";
-import DashboardRouter from "./pages/DashboardRouter";
-import UserDashboard from "./pages/dashboards/UserDashboard";
-import AdminDashboard from "./pages/dashboards/AdminDashboard";
-import TechnicianDashboard from "./pages/dashboards/TechnicianDashboard";
-import Profile from "./pages/Profile";
-import DashboardLayout from "./components/DashboardLayout";
-import BookingSystem from "./pages/modules/BookingSystem";
-import Facilities from "./pages/modules/Facilities";
-import IncidentTickets from "./pages/modules/IncidentTickets";
-import IncidentTicketsRouter from "./pages/modules/IncidentTicketsRouter";
-import Inventory from "./pages/modules/Inventory";
-import OpsSchedule from "./pages/modules/Schedule";
-import UserManagement from "./pages/admin/UserManagement";
-import TicketCreate from "./pages/modules/tickets/TicketCreate";
-import TicketDetail from "./pages/modules/tickets/TicketDetail";
-import TicketEdit from "./pages/modules/tickets/TicketEdit";
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
+import ProtectedRoute from './components/ProtectedRoute';
+import Navbar from './components/Navbar';
+import Login from './pages/Login';
+import Register from './pages/Register';
+import Notifications from './pages/Notifications';
+import DashboardRouter from './pages/DashboardRouter';
+import UserDashboard from './pages/dashboards/UserDashboard';
+import AdminDashboard from './pages/dashboards/AdminDashboard';
+import TechnicianDashboard from './pages/dashboards/TechnicianDashboard';
+import Profile from './pages/Profile';
+import DashboardLayout from './components/DashboardLayout';
+import BookingSystem from './pages/modules/BookingSystem';
+import Facilities from './pages/modules/Facilities';
+import IncidentTickets from './pages/modules/IncidentTickets';
+import IncidentTicketsRouter from './pages/modules/IncidentTicketsRouter';
+import Inventory from './pages/modules/Inventory';
+import OperationalSchedule from './pages/modules/OperationalSchedule';
+import OpsSchedule from './pages/modules/Schedule';
+import RepairProgress from './pages/modules/RepairProgress';
+import UserManagement from './pages/admin/UserManagement';
+import ActivationRequests from './pages/admin/ActivationRequests';
+import AdminBookingDashboard from './pages/admin/AdminBookingDashboard';
+import GlobalAnalytics from './pages/admin/GlobalAnalytics';
+import TicketCreate from './pages/modules/tickets/TicketCreate';
+import TicketDetail from './pages/modules/tickets/TicketDetail';
+import TicketEdit from './pages/modules/tickets/TicketEdit';
 
 function App() {
   return (
-    <Router>
+    <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <AuthProvider>
         <div className="app-container">
           <Navbar />
@@ -75,6 +75,8 @@ function App() {
 
                 <Route path="bookings" element={<BookingSystem />} />
                 <Route path="facilities" element={<Facilities />} />
+
+                {/* Incident Tickets — IncidentTicketsRouter handles role-based routing */}
                 <Route
                   path="incident-tickets"
                   element={
@@ -83,19 +85,25 @@ function App() {
                     </ProtectedRoute>
                   }
                 />
-                <Route path="inventory" element={<Inventory />} />
-                <Route path="schedule" element={<OpsSchedule />} />
+
+                {/* Ticket sub-routes (from ashen) */}
                 <Route path="tickets/create" element={<TicketCreate />} />
                 <Route path="tickets/:id" element={<TicketDetail />} />
                 <Route path="tickets/:id/edit" element={<TicketEdit />} />
-                <Route
-                  path="users"
-                  element={
-                    <ProtectedRoute allowedRoles={["ADMIN"]}>
-                      <UserManagement />
-                    </ProtectedRoute>
-                  }
-                />
+
+                {/* Inventory (from ashen) */}
+                <Route path="inventory" element={<Inventory />} />
+
+                {/* Schedule — supports both route versions */}
+                <Route path="schedule" element={<ProtectedRoute allowedRoles={['TECHNICIAN']}><OperationalSchedule /></ProtectedRoute>} />
+
+                <Route path="repair-progress" element={<RepairProgress />} />
+
+                {/* Admin-only routes */}
+                <Route path="users" element={<ProtectedRoute allowedRoles={['ADMIN']}><UserManagement /></ProtectedRoute>} />
+                <Route path="activation-requests" element={<ProtectedRoute allowedRoles={['ADMIN']}><ActivationRequests /></ProtectedRoute>} />
+                <Route path="facility-approvals" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminBookingDashboard /></ProtectedRoute>} />
+                <Route path="analytics" element={<ProtectedRoute allowedRoles={['ADMIN']}><GlobalAnalytics /></ProtectedRoute>} />
               </Route>
 
               <Route
