@@ -84,6 +84,7 @@ public class AuthService {
                 .role(user.getRole())
                 .provider(user.getProvider())
                 .profilePicture(user.getProfilePicture())
+                .disabledNotificationTypes(user.getDisabledNotificationTypes())
                 .build();
     }
 
@@ -126,6 +127,7 @@ public class AuthService {
                 .role(user.getRole())
                 .provider(user.getProvider())
                 .profilePicture(user.getProfilePicture())
+                .disabledNotificationTypes(user.getDisabledNotificationTypes())
                 .build();
     }
 }

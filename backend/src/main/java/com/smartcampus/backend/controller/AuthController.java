@@ -46,6 +46,7 @@ public class AuthController {
                 .role(user.getRole())
                 .provider(user.getProvider())
                 .profilePicture(user.getProfilePicture())
+                .disabledNotificationTypes(user.getDisabledNotificationTypes())
                 .build();
                 
         return ResponseEntity.ok(response);

@@ -44,8 +44,7 @@ const NotificationDropdown = ({ onClose }) => {
   const filters = [
     { key: 'ALL', label: 'All' },
     { key: 'BOOKING', label: '📅 Bookings' },
-    { key: 'TICKET', label: '🔧 Tickets' },
-    { key: 'GENERAL', label: '📢 General' },
+    { key: 'TICKET', label: '🔧 Tickets' }
   ];
 
   const filtered = activeFilter === 'ALL'

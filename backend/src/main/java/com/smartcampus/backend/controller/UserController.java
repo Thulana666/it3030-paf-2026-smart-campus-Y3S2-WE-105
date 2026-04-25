@@ -39,4 +39,15 @@ public class UserController {
         userService.changePassword(email, request);
         return ResponseEntity.ok("Password changed successfully!");
     }
+
+    /**
+     * PUT /api/users/notification-preferences
+     * Updates the user's notification preferences.
+     */
+    @PutMapping("/notification-preferences")
+    public ResponseEntity<AuthResponse> updateNotificationPreferences(@RequestBody com.smartcampus.backend.dto.NotificationPreferencesRequest request) {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        AuthResponse updatedResponsePayload = userService.updateNotificationPreferences(email, request);
+        return ResponseEntity.ok(updatedResponsePayload);
+    }
 }

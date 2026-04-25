@@ -42,6 +42,27 @@ public class UserService {
                 .role(user.getRole())
                 .provider(user.getProvider())
                 .profilePicture(user.getProfilePicture())
+                .disabledNotificationTypes(user.getDisabledNotificationTypes())
+                .build();
+    }
+
+    /**
+     * Updates the user's notification preferences.
+     */
+    public AuthResponse updateNotificationPreferences(String authenticatedEmail, com.smartcampus.backend.dto.NotificationPreferencesRequest request) {
+        User user = userRepository.findByEmail(authenticatedEmail)
+                .orElseThrow(() -> new IllegalArgumentException("Authenticated user record not found."));
+
+        user.setDisabledNotificationTypes(request.getDisabledNotificationTypes());
+        user = userRepository.save(user);
+
+        return AuthResponse.builder()
+                .name(user.getName())
+                .email(user.getEmail())
+                .role(user.getRole())
+                .provider(user.getProvider())
+                .profilePicture(user.getProfilePicture())
+                .disabledNotificationTypes(user.getDisabledNotificationTypes())
                 .build();
     }
 

@@ -34,3 +34,8 @@ export const adminUpdateUserRole = async (userId, role) => {
   const response = await api.patch(`/admin/users/${userId}/role`, null, { params: { role } });
   return response.data;
 };
+
+export const updateNotificationPreferences = async (disabledNotificationTypes) => {
+  const response = await api.put('/users/notification-preferences', { disabledNotificationTypes });
+  return response.data;
+};

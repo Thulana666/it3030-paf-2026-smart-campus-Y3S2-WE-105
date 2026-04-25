@@ -27,4 +27,5 @@ public class AuthResponse {
     private Role role;
     private com.smartcampus.backend.model.Provider provider;
     private String profilePicture;
+    private java.util.Set<com.smartcampus.backend.model.NotificationType> disabledNotificationTypes;
 }

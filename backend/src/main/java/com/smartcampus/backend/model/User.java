@@ -45,4 +45,8 @@ public class User {
 
     /** Timestamp of account creation */
     private LocalDateTime createdAt;
+
+    /** Notification preferences: which types of notifications are muted by this user */
+    @Builder.Default
+    private java.util.Set<NotificationType> disabledNotificationTypes = new java.util.HashSet<>();
 }
