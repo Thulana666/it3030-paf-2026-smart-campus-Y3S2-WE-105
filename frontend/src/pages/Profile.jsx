@@ -1,6 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { getMe, updateProfile, changePassword } from '../services/userService';
-import { getPasswordStrength, getPasswordRequirements } from '../utils/validators';
+import { getPasswordStrength, getPasswordRequirements, validatePassword } from '../utils/validators';
+
+const FieldError = ({ msg }) =>
+  msg ? (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '4px', color: '#ef4444', fontSize: '0.8rem' }}>
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      {msg}
+    </div>
+  ) : null;
+
+const EyeIcon = ({ show }) => show
+  ? <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+  : <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>;
+
+const eyeBtnStyle = { position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '0' };
 
 const PasswordRequirements = ({ password }) => {
   if (!password) return null;
@@ -47,6 +61,18 @@ const Profile = () => {
   const [formData, setFormData] = useState({ name: '', profilePicture: '' });
   const [passwordData, setPasswordData] = useState({ oldPassword: '', newPassword: '', confirmPassword: '' });
 
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [showOld, setShowOld] = useState(false);
+  const [touched, setTouched] = useState({ oldPassword: false, newPassword: false, confirmPassword: false });
+
+  const newPasswordErr = touched.newPassword ? validatePassword(passwordData.newPassword) : null;
+  const confirmPasswordErr = touched.confirmPassword
+    ? (!passwordData.confirmPassword ? 'Please confirm your password.' : passwordData.confirmPassword !== passwordData.newPassword ? 'Passwords do not match.' : null)
+    : null;
+
+  const blur = (field) => setTouched(t => ({ ...t, [field]: true }));
+
   useEffect(() => {
     const fetchProfile = async () => {
       try {
@@ -89,11 +115,11 @@ const Profile = () => {
 
   const handlePasswordSubmit = async (e) => {
     e.preventDefault();
+    setTouched({ oldPassword: true, newPassword: true, confirmPassword: true });
     setError('');
     setSuccess('');
 
-    if (passwordData.newPassword !== passwordData.confirmPassword) {
-      setError('New passwords do not match.');
+    if (validatePassword(passwordData.newPassword) || passwordData.newPassword !== passwordData.confirmPassword) {
       return;
     }
 
@@ -223,42 +249,56 @@ const Profile = () => {
               <form onSubmit={handlePasswordSubmit} className="auth-form">
                 <div className="form-group" style={{ marginBottom: '1.5rem' }}>
                   <label style={{ color: 'var(--text-dark)', fontWeight: '600' }}>Current Password</label>
-                  <input 
-                    type="password" 
-                    name="oldPassword" 
-                    value={passwordData.oldPassword} 
-                    onChange={handlePasswordChange} 
-                    required 
-                    placeholder="Verify your identity"
-                    style={{ background: 'rgba(255, 255, 255, 0.5)', border: '1px solid var(--border-light)' }} 
-                  />
+                  <div style={{ position: 'relative' }}>
+                    <input 
+                      type={showOld ? 'text' : 'password'}
+                      name="oldPassword" 
+                      value={passwordData.oldPassword} 
+                      onChange={handlePasswordChange} 
+                      onBlur={() => blur('oldPassword')}
+                      required 
+                      placeholder="Verify your identity"
+                      style={{ paddingRight: '2.8rem', background: 'rgba(255, 255, 255, 0.5)', border: '1px solid var(--border-light)' }} 
+                    />
+                    <button type="button" onClick={() => setShowOld(v => !v)} style={eyeBtnStyle} tabIndex={-1}><EyeIcon show={showOld} /></button>
+                  </div>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
                   <div className="form-group">
                     <label style={{ color: 'var(--text-dark)', fontWeight: '600' }}>New Password</label>
-                    <input 
-                      type="password" 
-                      name="newPassword" 
-                      value={passwordData.newPassword} 
-                      onChange={handlePasswordChange} 
-                      required 
-                      placeholder="Enter new password"
-                      style={{ background: 'rgba(255, 255, 255, 0.5)', border: '1px solid var(--border-light)' }} 
-                    />
+                    <div style={{ position: 'relative' }}>
+                      <input 
+                        type={showPassword ? 'text' : 'password'}
+                        name="newPassword" 
+                        value={passwordData.newPassword} 
+                        onChange={handlePasswordChange} 
+                        onBlur={() => blur('newPassword')}
+                        required 
+                        placeholder="Enter new password"
+                        style={{ paddingRight: '2.8rem', background: 'rgba(255, 255, 255, 0.5)', borderColor: newPasswordErr ? '#ef4444' : touched.newPassword && !newPasswordErr ? '#22c55e' : 'var(--border-light)' }} 
+                      />
+                      <button type="button" onClick={() => setShowPassword(v => !v)} style={eyeBtnStyle} tabIndex={-1}><EyeIcon show={showPassword} /></button>
+                    </div>
                     <PasswordStrengthBar password={passwordData.newPassword} />
                     <PasswordRequirements password={passwordData.newPassword} />
+                    <FieldError msg={newPasswordErr} />
                   </div>
                   <div className="form-group">
                     <label style={{ color: 'var(--text-dark)', fontWeight: '600' }}>Confirm Password</label>
-                    <input 
-                      type="password" 
-                      name="confirmPassword" 
-                      value={passwordData.confirmPassword} 
-                      onChange={handlePasswordChange} 
-                      required 
-                      style={{ background: 'rgba(255, 255, 255, 0.5)', border: '1px solid var(--border-light)' }} 
-                    />
+                    <div style={{ position: 'relative' }}>
+                      <input 
+                        type={showConfirm ? 'text' : 'password'}
+                        name="confirmPassword" 
+                        value={passwordData.confirmPassword} 
+                        onChange={handlePasswordChange} 
+                        onBlur={() => blur('confirmPassword')}
+                        required 
+                        style={{ paddingRight: '2.8rem', background: 'rgba(255, 255, 255, 0.5)', borderColor: confirmPasswordErr ? '#ef4444' : touched.confirmPassword && !confirmPasswordErr ? '#22c55e' : 'var(--border-light)' }} 
+                      />
+                      <button type="button" onClick={() => setShowConfirm(v => !v)} style={eyeBtnStyle} tabIndex={-1}><EyeIcon show={showConfirm} /></button>
+                    </div>
+                    <FieldError msg={confirmPasswordErr} />
                   </div>
                 </div>
 
