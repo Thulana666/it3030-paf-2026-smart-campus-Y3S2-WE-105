@@ -45,7 +45,7 @@ const AdminDashboard = () => {
           </div>
           <p style={{ color: 'var(--text-muted)', flex: 1 }}>Create, manage, and maintain campus facilities and resources. Add new facilities, update details, and manage resource availability.</p>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto' }}>
-            <span className="badge badge-general" style={{ color: '#8b5cf6', background: 'rgba(139,92,246,0.1)' }}>Full CRUD</span>
+            <span className="badge badge-general" style={{ color: '#8b5cf6', background: 'rgba(139,92,246,0.1)' }}>Admin Access</span>
             <button onClick={() => navigate('/dashboard/facilities')} className="btn btn-outline" style={{ padding: '0.4rem 1rem' }}>Manage</button>
           </div>
         </div>
