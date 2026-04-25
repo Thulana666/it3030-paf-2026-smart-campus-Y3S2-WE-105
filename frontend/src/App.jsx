@@ -4,6 +4,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import Navbar from './components/Navbar';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import Home from './pages/Home';
 import Notifications from './pages/Notifications';
 import DashboardRouter from './pages/DashboardRouter';
 import UserDashboard from './pages/dashboards/UserDashboard';
@@ -34,7 +35,7 @@ function App() {
           <Navbar />
           <main className="main-content">
             <Routes>
-              <Route path="/" element={<Navigate to="/login" />} />
+              <Route path="/" element={<Home />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
 
