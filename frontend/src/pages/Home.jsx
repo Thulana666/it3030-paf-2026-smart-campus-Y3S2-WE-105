@@ -92,6 +92,23 @@ const Home = () => {
 
       </div>
 
+      {/* Footer */}
+      <footer style={{ 
+        marginTop: '3rem', 
+        paddingTop: '2rem', 
+        borderTop: '1px solid rgba(0,0,0,0.05)', 
+        textAlign: 'center', 
+        color: 'var(--text-muted)',
+        fontSize: '0.85rem' 
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: '1.5rem', marginBottom: '1rem' }}>
+          <span style={{ cursor: 'pointer', transition: 'color 0.2s' }} onMouseEnter={(e) => e.target.style.color = 'var(--primary-color)'} onMouseLeave={(e) => e.target.style.color = 'var(--text-muted)'}>Privacy Policy</span>
+          <span style={{ cursor: 'pointer', transition: 'color 0.2s' }} onMouseEnter={(e) => e.target.style.color = 'var(--primary-color)'} onMouseLeave={(e) => e.target.style.color = 'var(--text-muted)'}>Terms of Service</span>
+          <span style={{ cursor: 'pointer', transition: 'color 0.2s' }} onMouseEnter={(e) => e.target.style.color = 'var(--primary-color)'} onMouseLeave={(e) => e.target.style.color = 'var(--text-muted)'}>Contact Support</span>
+        </div>
+        <p>&copy; {new Date().getFullYear()} Smart Campus Operations Hub. All rights reserved.</p>
+      </footer>
+
     </div>
   );
 };
