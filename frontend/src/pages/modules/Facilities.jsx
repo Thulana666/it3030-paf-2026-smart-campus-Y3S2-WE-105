@@ -986,8 +986,7 @@ const Facilities = () => {
                       gap: '0.5rem'
                     }}
                     onClick={() => {
-                      // Navigate to booking module (placeholder)
-                      setMessage({ type: 'success', text: 'Redirecting to booking system...' });
+                      navigate('/dashboard/bookings', { state: { autoBook: true, resourceId: r.id } });
                     }}
                   >
                     📅 Book This Resource

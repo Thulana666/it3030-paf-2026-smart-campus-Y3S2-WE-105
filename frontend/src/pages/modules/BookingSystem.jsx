@@ -1,4 +1,5 @@
 import React, { useContext, useEffect, useState, useCallback, useMemo } from 'react';
+import { useLocation } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
 import {
   getBookingsByUser,
@@ -30,6 +31,17 @@ export default function BookingSystem() {
   const [searchTerm,  setSearchTerm]  = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [resources, setResources] = useState([]);
+  const location = useLocation();
+  const [initialResource, setInitialResource] = useState(null);
+
+  useEffect(() => {
+    if (location.state?.autoBook && location.state?.resourceId) {
+      setInitialResource(location.state.resourceId);
+      setShowModal(true);
+      // Clean up the state so it doesn't reopen on refresh
+      window.history.replaceState({}, document.title);
+    }
+  }, [location]);
 
   // Always use email as the identifier so it displays correctly on the admin dashboard
   const studentId = user?.email || '';
@@ -139,6 +151,7 @@ export default function BookingSystem() {
 
   const openModal  = () => {
     setEditingBooking(null);
+    setInitialResource(null);
     setShowModal(true);
   };
 
@@ -241,6 +254,7 @@ export default function BookingSystem() {
         <BookingForm 
           studentId={studentId} 
           editBooking={editingBooking}
+          initialResource={initialResource}
           onSuccess={() => { closeModal(); fetchBookings(); }} 
           onClose={closeModal} 
           showToast={showToast} 

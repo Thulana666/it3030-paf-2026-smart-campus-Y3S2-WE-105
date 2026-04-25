@@ -22,7 +22,7 @@ const EMPTY_FORM = {
   expectedAttendees: '',
 };
 
-export default function BookingForm({ studentId, onSuccess, onClose, showToast, editBooking }) {
+export default function BookingForm({ studentId, onSuccess, onClose, showToast, editBooking, initialResource }) {
   const [resources, setResources] = useState([]); // List of ACTIVE resources from Module A
   const [loadingResources, setLoadingResources] = useState(true);
   const [form, setForm] = useState(EMPTY_FORM); // Current form state
@@ -39,7 +39,7 @@ export default function BookingForm({ studentId, onSuccess, onClose, showToast, 
         const data = await getActiveResources();
         setResources(data);
         if (data.length > 0 && !editBooking) {
-          setForm(prev => ({ ...prev, resourceId: data[0].id }));
+          setForm(prev => ({ ...prev, resourceId: initialResource || data[0].id }));
         }
       } catch (err) {
         console.error("Failed to fetch resources", err);
