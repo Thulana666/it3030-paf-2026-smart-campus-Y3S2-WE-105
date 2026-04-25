@@ -1,30 +1,23 @@
 package com.smartcampus.backend.service;
 
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.stream.Collectors;
-
-import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
-
 import com.smartcampus.backend.dto.CommentRequest;
 import com.smartcampus.backend.dto.CommentResponse;
 import com.smartcampus.backend.dto.TicketCreateRequest;
 import com.smartcampus.backend.dto.TicketResponse;
 import com.smartcampus.backend.exception.ResourceNotFoundException;
-import com.smartcampus.backend.model.NotificationType;
-import com.smartcampus.backend.model.Role;
-import com.smartcampus.backend.model.Ticket;
-import com.smartcampus.backend.model.TicketComment;
-import com.smartcampus.backend.model.TicketStatus;
-import com.smartcampus.backend.model.User;
+import com.smartcampus.backend.model.*;
 import com.smartcampus.backend.repository.TicketCommentRepository;
 import com.smartcampus.backend.repository.TicketRepository;
 import com.smartcampus.backend.repository.UserRepository;
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service

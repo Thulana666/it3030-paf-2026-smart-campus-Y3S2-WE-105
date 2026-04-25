@@ -19,6 +19,9 @@ public class AuthResponse {
     /** Bearer token to be sent in subsequent requests */
     private String token;
 
+    /** MongoDB document ID — used as studentId when making bookings */
+    private String id;
+
     private String name;
     private String email;
     private Role role;

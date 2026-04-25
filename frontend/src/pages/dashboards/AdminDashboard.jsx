@@ -8,7 +8,7 @@ const AdminDashboard = () => {
 
   return (
     <div className="page-container" style={{ animation: 'slideUp 0.5s ease backwards' }}>
-      
+
       {/* Header Section */}
       <div className="glass" style={{ padding: '2.5rem', borderRadius: '20px', marginBottom: '2rem', borderLeft: '6px solid var(--primary-color)' }}>
         <h1 style={{ fontSize: '2.2rem', marginBottom: '0.5rem', color: 'var(--text-dark)' }}>Administrator Hub</h1>
@@ -19,7 +19,7 @@ const AdminDashboard = () => {
 
       {/* Admin Module Grid */}
       <div style={{ display: 'grid', gap: '1.5rem', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))' }}>
-        
+
         {/* User Management Card */}
         <div className="card glass" style={{ padding: '2rem', borderRadius: '15px', display: 'flex', flexDirection: 'column', gap: '1rem', transition: 'transform 0.2s', cursor: 'default' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -35,18 +35,37 @@ const AdminDashboard = () => {
           </div>
         </div>
 
-        {/* Facility Oversight Card */}
+        {/* Facility Management Card */}
         <div className="card glass" style={{ padding: '2rem', borderRadius: '15px', display: 'flex', flexDirection: 'column', gap: '1rem', transition: 'transform 0.2s', cursor: 'default' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div style={{ background: 'rgba(139, 92, 246, 0.1)', padding: '12px', borderRadius: '12px', color: 'var(--general-color)' }}>
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
             </div>
-            <h3 style={{ fontSize: '1.3rem', color: 'var(--text-dark)' }}>Facility Oversight</h3>
+            <h3 style={{ fontSize: '1.3rem', color: 'var(--text-dark)' }}>Facility Management</h3>
           </div>
-          <p style={{ color: 'var(--text-muted)', flex: 1 }}>Review and authorize facility booking requests, manage asset availability, and oversee campus structural health.</p>
+          <p style={{ color: 'var(--text-muted)', flex: 1 }}>Create, manage, and maintain campus facilities and resources. Add new facilities, update details, and manage resource availability.</p>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto' }}>
-            <span className="badge badge-general" style={{ color: '#8b5cf6', background: 'rgba(139,92,246,0.1)' }}>0 Pending</span>
-            <button onClick={() => navigate('/dashboard/facility-approvals')} className="btn btn-outline" style={{ padding: '0.4rem 1rem' }}>Approvals</button>
+            <span className="badge badge-general" style={{ color: '#8b5cf6', background: 'rgba(139,92,246,0.1)' }}>Full CRUD</span>
+            <button onClick={() => navigate('/dashboard/facilities')} className="btn btn-outline" style={{ padding: '0.4rem 1rem' }}>Manage</button>
+          </div>
+        </div>
+
+        {/* Booking Management Card */}
+        <div className="card glass" style={{ padding: '2rem', borderRadius: '15px', display: 'flex', flexDirection: 'column', gap: '1rem', transition: 'transform 0.2s', cursor: 'default' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ background: 'rgba(79, 70, 229, 0.1)', padding: '12px', borderRadius: '12px', color: 'var(--primary-color)' }}>
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+            </div>
+            <h3 style={{ fontSize: '1.3rem', color: 'var(--text-dark)' }}>Booking Management</h3>
+          </div>
+          <p style={{ color: 'var(--text-muted)', flex: 1 }}>
+            Review and monitor facility approval requests and operational oversight from one place.
+          </p>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto' }}>
+            <span className="badge badge-general" style={{ color: '#4f46e5', background: 'rgba(79,70,229,0.1)' }}>Approvals</span>
+            <button onClick={() => navigate('/dashboard/facility-approvals')} className="btn btn-outline" style={{ padding: '0.4rem 1rem' }}>
+              Open
+            </button>
           </div>
         </div>
 

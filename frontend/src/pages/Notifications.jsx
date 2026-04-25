@@ -28,10 +28,8 @@ const Notifications = () => {
   const handleMarkAsRead = async (id) => {
     try {
       await api.put(`/notifications/${id}/read`);
-      // Optimistically update UI
-      setNotifications(prev => 
-        prev.map(notif => notif.id === id ? { ...notif, read: true } : notif)
-      );
+      // Remove from list after marking as read
+      setNotifications(prev => prev.filter(notif => notif.id !== id));
     } catch (err) {
       console.error('Failed to mark as read', err);
     }
