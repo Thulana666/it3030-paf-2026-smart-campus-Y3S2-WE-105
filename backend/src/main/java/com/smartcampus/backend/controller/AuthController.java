@@ -40,11 +40,13 @@ public class AuthController {
                 .orElseThrow(() -> new IllegalArgumentException("Session user not found"));
 
         AuthResponse response = AuthResponse.builder()
+                .id(user.getId())
                 .name(user.getName())
                 .email(user.getEmail())
                 .role(user.getRole())
                 .provider(user.getProvider())
                 .profilePicture(user.getProfilePicture())
+                .disabledNotificationTypes(user.getDisabledNotificationTypes())
                 .build();
                 
         return ResponseEntity.ok(response);

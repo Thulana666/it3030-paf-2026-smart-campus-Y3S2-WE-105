@@ -29,6 +29,7 @@ import java.util.stream.Collectors;
 public class NotificationService {
 
     private final NotificationRepository notificationRepository;
+    private final com.smartcampus.backend.repository.UserRepository userRepository;
 
     // -------------------------------------------------------
     // Read operations
@@ -90,6 +91,12 @@ public class NotificationService {
             String userId,
             String message,
             NotificationType type) {
+
+        com.smartcampus.backend.model.User user = userRepository.findById(userId).orElse(null);
+        if (user != null && user.getDisabledNotificationTypes() != null && user.getDisabledNotificationTypes().contains(type)) {
+            log.info("Notification suppressed for user {} — type: {} is disabled", userId, type);
+            return null;
+        }
 
         Notification notification = Notification.builder()
                 .userId(userId)

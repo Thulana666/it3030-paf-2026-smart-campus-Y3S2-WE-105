@@ -19,9 +19,13 @@ public class AuthResponse {
     /** Bearer token to be sent in subsequent requests */
     private String token;
 
+    /** MongoDB document ID — used as studentId when making bookings */
+    private String id;
+
     private String name;
     private String email;
     private Role role;
     private com.smartcampus.backend.model.Provider provider;
     private String profilePicture;
+    private java.util.Set<com.smartcampus.backend.model.NotificationType> disabledNotificationTypes;
 }

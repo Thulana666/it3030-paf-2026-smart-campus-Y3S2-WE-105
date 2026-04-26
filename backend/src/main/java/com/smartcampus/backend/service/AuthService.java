@@ -78,11 +78,13 @@ public class AuthService {
 
         return AuthResponse.builder()
                 .token(token)
+                .id(user.getId())
                 .name(user.getName())
                 .email(user.getEmail())
                 .role(user.getRole())
                 .provider(user.getProvider())
                 .profilePicture(user.getProfilePicture())
+                .disabledNotificationTypes(user.getDisabledNotificationTypes())
                 .build();
     }
 
@@ -119,11 +121,13 @@ public class AuthService {
 
         return AuthResponse.builder()
                 .token(token)
+                .id(user.getId())
                 .name(user.getName())
                 .email(user.getEmail())
                 .role(user.getRole())
                 .provider(user.getProvider())
                 .profilePicture(user.getProfilePicture())
+                .disabledNotificationTypes(user.getDisabledNotificationTypes())
                 .build();
     }
 }

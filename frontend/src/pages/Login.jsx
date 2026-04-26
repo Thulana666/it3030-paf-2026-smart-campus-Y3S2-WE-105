@@ -76,6 +76,7 @@ const Login = () => {
             theme="filled_blue"
             text="signin_with"
             shape="rectangular"
+            locale="en"
           />
         </div>
 
@@ -87,8 +88,9 @@ const Login = () => {
         <form onSubmit={handleSubmit} className="auth-form" noValidate>
           {/* Email */}
           <div className="form-group">
-            <label>Email Address</label>
+            <label htmlFor="emailInput">Email Address</label>
             <input
+              id="emailInput"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -101,9 +103,10 @@ const Login = () => {
 
           {/* Password */}
           <div className="form-group">
-            <label>Password</label>
+            <label htmlFor="passwordInput">Password</label>
             <div style={{ position: 'relative' }}>
               <input
+                id="passwordInput"
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}

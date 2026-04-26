@@ -124,6 +124,7 @@ const Register = () => {
             theme="filled_blue"
             text="signup_with"
             shape="rectangular"
+            locale="en"
           />
         </div>
 
@@ -135,8 +136,9 @@ const Register = () => {
         <form onSubmit={handleSubmit} className="auth-form" noValidate>
           {/* Full Name */}
           <div className="form-group">
-            <label>Full Name</label>
+            <label htmlFor="nameInput">Full Name</label>
             <input
+              id="nameInput"
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value.replace(/[^a-zA-Z\s'\-]/g, ''))}
@@ -149,8 +151,9 @@ const Register = () => {
 
           {/* Email */}
           <div className="form-group">
-            <label>Email Address</label>
+            <label htmlFor="emailInput">Email Address</label>
             <input
+              id="emailInput"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -163,9 +166,10 @@ const Register = () => {
 
           {/* Password */}
           <div className="form-group">
-            <label>Password</label>
+            <label htmlFor="passwordInput">Password</label>
             <div style={{ position: 'relative' }}>
               <input
+                id="passwordInput"
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -182,9 +186,10 @@ const Register = () => {
 
           {/* Confirm Password */}
           <div className="form-group">
-            <label>Confirm Password</label>
+            <label htmlFor="confirmPasswordInput">Confirm Password</label>
             <div style={{ position: 'relative' }}>
               <input
+                id="confirmPasswordInput"
                 type={showConfirm ? 'text' : 'password'}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
