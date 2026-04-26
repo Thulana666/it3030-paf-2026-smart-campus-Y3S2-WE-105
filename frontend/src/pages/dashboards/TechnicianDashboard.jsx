@@ -28,7 +28,7 @@ const TechnicianDashboard = () => {
             color: "var(--text-dark)",
           }}
         >
-          Technician Portal
+          Dashboard
         </h1>
         <p style={{ color: "var(--text-muted)", fontSize: "1.05rem" }}>
           Maintenance & Operations active.{" "}

@@ -11,7 +11,7 @@ const AdminDashboard = () => {
 
       {/* Header Section */}
       <div className="glass" style={{ padding: '2.5rem', borderRadius: '20px', marginBottom: '2rem', borderLeft: '6px solid var(--primary-color)' }}>
-        <h1 style={{ fontSize: '2.2rem', marginBottom: '0.5rem', color: 'var(--text-dark)' }}>Administrator Hub</h1>
+        <h1 style={{ fontSize: '2.2rem', marginBottom: '0.5rem', color: 'var(--text-dark)' }}>Dashboard</h1>
         <p style={{ color: 'var(--text-muted)', fontSize: '1.05rem' }}>
           System diagnostics active. <span style={{ color: 'var(--primary-color)', fontWeight: '600' }}>Welcome, {user?.name || user?.email}</span> — Admin Workspace is ready.
         </p>

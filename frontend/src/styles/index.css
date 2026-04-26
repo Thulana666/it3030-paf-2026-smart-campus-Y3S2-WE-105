@@ -63,7 +63,9 @@ a:hover { color: var(--primary-hover); text-decoration: underline; }
   flex-direction: column;
 }
 
-/* Sidebar Dashboard Infrastructure */
+/* Sidebar Dashboard Infrastructure 
+   FRONTEND STRATEGY: "Main Area" renamed to "Dashboard" for clarity.
+*/
 .dashboard-layout {
   display: flex;
   flex: 1; 
@@ -147,10 +149,32 @@ a:hover { color: var(--primary-hover); text-decoration: underline; }
   text-decoration: none;
 }
 
+/* 
+   FRONTEND STRATEGY: Navigation Highlighting
+   Sidebar links use .active-link for the current route.
+   Includes a left-accent indicator and distinct shadow for visibility.
+*/
 .sidebar-link.active-link {
   background: var(--primary-color);
   color: white;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 8px 16px rgba(99, 102, 241, 0.2);
+  position: relative;
+  font-weight: 600;
+}
+
+.sidebar-link.active-link::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 20%;
+  height: 60%;
+  width: 4px;
+  background: white;
+  border-radius: 0 4px 4px 0;
+}
+
+.sidebar.collapsed .sidebar-link.active-link::before {
+  left: 4px;
 }
 
 .notification-dropdown {
@@ -393,6 +417,482 @@ a:hover { color: var(--primary-hover); text-decoration: underline; }
   text-align: center;
 }
 .empty-state { text-align: center; padding: 4rem 2rem; color: var(--text-muted); }
+
+/* ==========================================
+   Technician Dashboard Styles
+   ========================================== */
+
+.tech-dashboard {
+  padding: 1rem;
+  max-width: 1400px;
+  margin: 0 auto;
+  animation: slideUp 0.4s ease-out;
+}
+
+/* Header */
+.tech-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  background: white;
+  padding: 1.5rem 2rem;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.tech-header-text h1 {
+  font-size: 1.75rem;
+  color: #1e293b;
+  margin-bottom: 0.25rem;
+}
+
+.tech-header-text p {
+  color: #64748b;
+  font-size: 0.95rem;
+}
+
+.tech-header-name {
+  font-weight: 600;
+  color: #334155;
+}
+
+.tech-refresh-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  color: #475569;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.tech-refresh-btn:hover {
+  background: #e2e8f0;
+  color: #1e293b;
+}
+
+/* Stats Grid */
+.tech-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.tech-stat-card {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  border-bottom: 4px solid transparent;
+}
+
+.tech-stat-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tech-stat-number {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1e293b;
+  line-height: 1.2;
+}
+
+.tech-stat-label {
+  font-size: 0.875rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.tech-stat-blue   { border-bottom-color: #3b82f6; }
+.tech-stat-blue .tech-stat-icon { background: #eff6ff; color: #3b82f6; }
+
+.tech-stat-purple { border-bottom-color: #8b5cf6; }
+.tech-stat-purple .tech-stat-icon { background: #f5f3ff; color: #8b5cf6; }
+
+.tech-stat-green  { border-bottom-color: #10b981; }
+.tech-stat-green .tech-stat-icon { background: #ecfdf5; color: #10b981; }
+
+.tech-stat-red    { border-bottom-color: #ef4444; }
+.tech-stat-red .tech-stat-icon { background: #fef2f2; color: #ef4444; }
+
+/* Ticket List Card */
+.tech-ticket-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  overflow: hidden;
+  margin-bottom: 2rem;
+}
+
+.tech-toolbar {
+  padding: 1.5rem 2rem;
+  border-bottom: 1px solid #f1f5f9;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.tech-toolbar-title {
+  font-size: 1.25rem;
+  color: #1e293b;
+  font-weight: 600;
+}
+
+.tech-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.tech-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.tech-search svg {
+  position: absolute;
+  left: 0.75rem;
+  color: #94a3b8;
+}
+
+.tech-search input {
+  padding: 0.5rem 0.75rem 0.5rem 2.25rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  width: 240px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.tech-search input:focus {
+  border-color: #3b82f6;
+}
+
+.tech-filter-select {
+  padding: 0.5rem 2rem 0.5rem 0.75rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: white;
+  color: #475569;
+  font-size: 0.9rem;
+  outline: none;
+  cursor: pointer;
+}
+
+/* Table Styles */
+.tech-table-wrap {
+  overflow-x: auto;
+}
+
+.tech-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.tech-table th {
+  background: #f8fafc;
+  padding: 1rem 1.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: #64748b;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.tech-table td {
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
+}
+
+.tech-table-row {
+  transition: background 0.2s;
+  cursor: pointer;
+}
+
+.tech-table-row:hover {
+  background: #f8fafc;
+}
+
+.tech-table-row.active {
+  background: #eff6ff;
+}
+
+.tech-table-ticket-title {
+  font-weight: 600;
+  color: #1e293b;
+  font-size: 0.95rem;
+}
+
+.tech-table-ticket-id {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  font-family: monospace;
+}
+
+.tech-table-student {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: #475569;
+  font-size: 0.9rem;
+}
+
+.tech-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #e2e8f0;
+  color: #475569;
+  font-weight: 600;
+  border-radius: 50%;
+}
+
+.tech-avatar-xs {
+  width: 24px;
+  height: 24px;
+  font-size: 0.7rem;
+}
+
+.tech-table-age {
+  color: #64748b;
+  font-size: 0.875rem;
+}
+
+.tech-btn-view {
+  padding: 0.4rem 0.75rem;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  color: #475569;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.tech-btn-view:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: #1e293b;
+}
+
+/* Slide-in Panel Styles */
+.tech-panel-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+  animation: fadeIn 0.3s ease;
+}
+
+.tech-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  max-width: 900px;
+  background: white;
+  z-index: 1001;
+  display: flex;
+  flex-direction: column;
+  box-shadow: -10px 0 50px rgba(0, 0, 0, 0.1);
+  animation: slideInRight 0.4s cubic-bezier(0, 0, 0.2, 1);
+}
+
+.tech-panel-header {
+  padding: 1.5rem 2rem;
+  border-bottom: 1px solid #f1f5f9;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #fff;
+}
+
+.tech-panel-header-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.tech-panel-back {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #e2e8f0;
+  background: white;
+  cursor: pointer;
+  color: #64748b;
+}
+
+.tech-panel-id {
+  font-family: monospace;
+  font-weight: 600;
+  color: #3b82f6;
+  font-size: 0.9rem;
+}
+
+.tech-panel-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 1rem 2rem;
+}
+
+.tech-panel-badges {
+  display: flex;
+  gap: 0.75rem;
+  margin: 0 2rem 1.5rem;
+}
+
+/* 
+   FRONTEND STRATEGY: Consistent Tab Styling
+   Use .tech-panel-tabs container with .tech-panel-tab buttons.
+   Active state is handled via .active class.
+*/
+.tech-panel-tabs {
+  display: flex;
+  gap: 0;
+  padding: 0 2rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.tech-panel-tab {
+  padding: 1rem 1.5rem;
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #64748b;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.2s ease;
+}
+
+.tech-panel-tab.active {
+  color: #3b82f6;
+  border-bottom-color: #3b82f6;
+  background: rgba(59, 130, 246, 0.04);
+}
+
+.tech-panel-tab-count {
+  background: #f1f5f9;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+}
+
+.tech-panel-body {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+.tech-panel-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 2rem;
+}
+
+.tech-panel-sidebar {
+  width: 300px;
+  border-left: 1px solid #f1f5f9;
+  background: #f8fafc;
+  padding: 2rem;
+  overflow-y: auto;
+}
+
+/* States */
+.tech-state-center {
+  padding: 4rem 2rem;
+  text-align: center;
+  color: #64748b;
+}
+
+.tech-state-center svg {
+  margin-bottom: 1rem;
+  color: #cbd5e1;
+}
+
+.tech-state-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #334155;
+  margin-bottom: 0.25rem;
+}
+
+.tech-state-sub {
+  font-size: 0.9rem;
+}
+
+.tech-spinner {
+  border: 3px solid #f1f5f9;
+  border-top: 3px solid #3b82f6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 1rem;
+}
+
+.tech-spinner-lg {
+  width: 40px;
+  height: 40px;
+}
+
+/* Animations */
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ==========================================
+   Ticket List Styles
+   ========================================== */
 
 /* ==========================================
    Ticket List Styles

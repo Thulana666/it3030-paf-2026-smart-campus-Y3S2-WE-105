@@ -7,7 +7,7 @@ const NAV_CONFIG = {
   USER: {
     sections: [
       {
-        title: 'Main Area',
+        title: 'Dashboard',
         links: [
           { to: '/dashboard', label: 'Dashboard', end: true, icon: <><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></> },
         ],
@@ -26,7 +26,7 @@ const NAV_CONFIG = {
   ADMIN: {
     sections: [
       {
-        title: 'Main Area',
+        title: 'Dashboard',
         links: [
           { to: '/dashboard', label: 'Dashboard', end: true, icon: <><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></> },
         ],
@@ -47,7 +47,7 @@ const NAV_CONFIG = {
   TECHNICIAN: {
     sections: [
       {
-        title: 'Main Area',
+        title: 'Dashboard',
         links: [
           { to: '/dashboard', label: 'Dashboard', end: true, icon: <><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></> },
         ],
@@ -76,6 +76,11 @@ const SvgLink = ({ icon }) => (
 );
 
 // ─── Sidebar Component ─────────────────────────────────────────────────────────
+/**
+ * Sidebar component that provides role-based navigation links.
+ * Uses NavLink for automatic active state management.
+ * Active links are styled with .active-link in index.css.
+ */
 const Sidebar = () => {
   const { user } = useContext(AuthContext);
   const [isCollapsed, setIsCollapsed] = useState(false);
