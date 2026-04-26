@@ -53,6 +53,7 @@ const TechnicianTicketPanel = ({
   const [savingStatus, setSavingStatus] = useState(false);
   const [showCloseModal, setShowCloseModal] = useState(false);
   const [closingTicket, setClosingTicket] = useState(false);
+  // Tab management using explicit state for internal navigation
   const [activeTab, setActiveTab] = useState("chat"); // 'chat' | 'details'
 
   /* Sync if parent passes a new ticket */
