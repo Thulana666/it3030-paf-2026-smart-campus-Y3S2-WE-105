@@ -25,6 +25,9 @@ export default function AdminBookingDashboard() {
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [resources, setResources] = useState([]);
   const [selectedNote, setSelectedNote] = useState(null);
+  const [actionModal, setActionModal] = useState({ isOpen: false, id: null, status: null });
+  const [actionReason, setActionReason] = useState('');
+  const [actionError, setActionError] = useState('');
 
   const fetchBookings = async () => {
     setLoading(true);
@@ -75,32 +78,33 @@ export default function AdminBookingDashboard() {
     });
   }, [bookings, searchTerm, statusFilter]);
 
-  const handleStatusUpdateAction = async (id, status) => {
-    let reason = '';
-    
-    if (status === 'APPROVED') {
-       const userNote = prompt("Add an optional approval note:");
-       if (userNote === null) return; // Cancelled
-       reason = userNote;
-    } else if (status === 'REJECTED') {
-       const userReason = prompt("Reason for rejection (required):");
-       if (userReason === null) return; // Cancelled
-       if (!userReason.trim()) {
-           alert("Rejection reason is required.");
-           return;
-       }
-       reason = userReason;
-    } else if (status === 'CANCELLED') {
-       if (!window.confirm("Are you sure you want to revoke this approval? This will cancel the booking.")) return;
-       reason = "Revoked by Administrator";
-    }
-    
+  const executeStatusUpdate = async (id, status, reason) => {
     try {
       await updateBookingStatus(id, status, reason);
       fetchBookings();
     } catch (err) {
       alert(`Failed to update booking status`);
     }
+  };
+
+  const handleStatusUpdateAction = (id, status) => {
+    if (status === 'CANCELLED') {
+       if (!window.confirm("Are you sure you want to revoke this approval? This will cancel the booking.")) return;
+       executeStatusUpdate(id, status, "Revoked by Administrator");
+       return;
+    }
+    setActionModal({ isOpen: true, id, status });
+    setActionReason('');
+    setActionError('');
+  };
+
+  const handleModalSubmit = () => {
+    if (actionModal.status === 'REJECTED' && !actionReason.trim()) {
+      setActionError("Rejection reason is required.");
+      return;
+    }
+    executeStatusUpdate(actionModal.id, actionModal.status, actionReason.trim());
+    setActionModal({ isOpen: false, id: null, status: null });
   };
 
   if (loading) {
@@ -350,6 +354,59 @@ export default function AdminBookingDashboard() {
             <div className="bk-modal-footer">
               <button className="modal-footer-btn" onClick={() => setSelectedNote(null)}>
                 Close Note
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Action Reason Modal ── */}
+      {actionModal.isOpen && (
+        <div className="bk-modal-overlay" onClick={() => setActionModal({ isOpen: false, id: null, status: null })}>
+          <div className="bk-modal glass" onClick={e => e.stopPropagation()} style={{ maxWidth: '450px' }}>
+            <div className="bk-modal-header">
+              <h2 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ color: actionModal.status === 'APPROVED' ? '#10b981' : '#ef4444' }}>
+                  {actionModal.status === 'APPROVED' ? '✅' : '❌'}
+                </span>
+                {actionModal.status === 'APPROVED' ? 'Approve Booking' : 'Reject Booking'}
+              </h2>
+              <button className="bk-modal-close" onClick={() => setActionModal({ isOpen: false, id: null, status: null })}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              </button>
+            </div>
+            
+            <div className="bk-note-content-area" style={{ padding: '1.5rem', background: 'transparent' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: 'var(--text-dark)' }}>
+                {actionModal.status === 'APPROVED' ? 'Optional Approval Note:' : 'Reason for Rejection (Required):'}
+              </label>
+              <textarea 
+                value={actionReason}
+                onChange={(e) => { setActionReason(e.target.value); setActionError(''); }}
+                rows={4}
+                style={{ 
+                  width: '100%', padding: '0.75rem', borderRadius: '8px', 
+                  border: actionError ? '1px solid #ef4444' : '1px solid rgba(0,0,0,0.1)', 
+                  outline: 'none', resize: 'vertical', fontFamily: 'inherit'
+                }}
+                placeholder={actionModal.status === 'APPROVED' ? 'Leave a note (optional)...' : 'Why is this request being rejected?...'}
+              />
+              {actionError && <div style={{ color: '#ef4444', fontSize: '0.85rem', marginTop: '0.5rem' }}>{actionError}</div>}
+            </div>
+
+            <div className="bk-modal-footer">
+              <button className="btn btn-outline" onClick={() => setActionModal({ isOpen: false, id: null, status: null })}>
+                Cancel
+              </button>
+              <button 
+                className="btn" 
+                onClick={handleModalSubmit}
+                style={{ 
+                  background: actionModal.status === 'APPROVED' ? '#10b981' : '#ef4444', 
+                  color: 'white', border: 'none', padding: '0.6rem 1.2rem', borderRadius: '8px', fontWeight: '600', marginLeft: '0.5rem'
+                }}
+              >
+                Confirm {actionModal.status === 'APPROVED' ? 'Approval' : 'Rejection'}
               </button>
             </div>
           </div>
