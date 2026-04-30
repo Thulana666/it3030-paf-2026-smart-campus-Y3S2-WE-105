@@ -47,6 +47,23 @@ public class TicketService {
         return response;
     }
 
+    private boolean isUnassigned(Ticket ticket) {
+        return ticket.getAssignedTo() == null || ticket.getAssignedTo().isBlank();
+    }
+
+    private boolean matchesTechnician(Ticket ticket, String technicianId, String technicianEmail) {
+        if (isUnassigned(ticket)) {
+            return false;
+        }
+
+        String assignedTo = ticket.getAssignedTo();
+        boolean idMatch = technicianId != null && !technicianId.isBlank() && technicianId.equals(assignedTo);
+        boolean emailMatch = technicianEmail != null && !technicianEmail.isBlank()
+                && technicianEmail.equalsIgnoreCase(assignedTo);
+
+        return idMatch || emailMatch;
+    }
+
     /** Build a CommentResponse enriched with author name and role. */
     private CommentResponse enrichComment(TicketComment comment) {
         CommentResponse response = CommentResponse.from(comment);
@@ -281,24 +298,58 @@ public class TicketService {
 
     // ─── TECHNICIAN METHODS ───────────────────────────────────────────────────
 
-    public List<TicketResponse> getAssignedTickets(String technicianId) {
-        List<Ticket> assigned = ticketRepository.findByAssignedToOrderByCreatedAtDesc(technicianId);
-        List<Ticket> unassigned = ticketRepository.findByStatusAndAssignedToIsNullOrderByCreatedAtDesc(TicketStatus.OPEN);
+    private void ensureTechnicianCanManageTicket(Ticket ticket, String technicianId, String technicianEmail) {
+        if (isUnassigned(ticket)) {
+            if (technicianId != null && !technicianId.isBlank()) {
+                ticket.setAssignedTo(technicianId);
+            } else if (technicianEmail != null && !technicianEmail.isBlank()) {
+                ticket.setAssignedTo(technicianEmail);
+            } else {
+                throw new org.springframework.security.access.AccessDeniedException("Unable to resolve technician identity");
+            }
+            return;
+        }
+
+        if (!matchesTechnician(ticket, technicianId, technicianEmail)) {
+            throw new org.springframework.security.access.AccessDeniedException("You are not assigned to this ticket");
+        }
+    }
+
+    public List<TicketResponse> getAssignedTickets(String technicianId, String technicianEmail) {
+        List<Ticket> assigned = new ArrayList<>();
+
+        if (technicianId != null && !technicianId.isBlank()) {
+            assigned.addAll(ticketRepository.findByAssignedToOrderByCreatedAtDesc(technicianId));
+        }
+
+        if (technicianEmail != null && !technicianEmail.isBlank()) {
+            ticketRepository.findByAssignedToOrderByCreatedAtDesc(technicianEmail).forEach(ticket -> {
+                if (assigned.stream().noneMatch(existing -> existing.getId().equals(ticket.getId()))) {
+                    assigned.add(ticket);
+                }
+            });
+        }
+
+        List<Ticket> unassigned = ticketRepository.findAll().stream()
+                .filter(ticket -> ticket.getStatus() == TicketStatus.OPEN && isUnassigned(ticket))
+                .collect(Collectors.toCollection(ArrayList::new));
 
         List<Ticket> allTickets = new ArrayList<>(assigned);
-        allTickets.addAll(unassigned);
+        unassigned.forEach(ticket -> {
+            if (allTickets.stream().noneMatch(existing -> existing.getId().equals(ticket.getId()))) {
+                allTickets.add(ticket);
+            }
+        });
 
         return allTickets.stream()
                 .map(this::enrichTicket)
                 .collect(Collectors.toList());
     }
 
-    public TicketResponse resolveTicket(String ticketId, String resolutionNotes, String technicianId) {
+    public TicketResponse resolveTicket(String ticketId, String resolutionNotes, String technicianId, String technicianEmail) {
         Ticket ticket = getTicketById(ticketId);
 
-        if (!technicianId.equals(ticket.getAssignedTo())) {
-            throw new org.springframework.security.access.AccessDeniedException("You are not assigned to this ticket");
-        }
+        ensureTechnicianCanManageTicket(ticket, technicianId, technicianEmail);
 
         ticket.setStatus(TicketStatus.RESOLVED);
         ticket.setResolutionNotes(resolutionNotes);
@@ -316,12 +367,10 @@ public class TicketService {
         return enrichTicket(saved);
     }
 
-    public TicketResponse updateTicketStatus(String ticketId, String newStatus, String resolutionNotes, String technicianId) {
+    public TicketResponse updateTicketStatus(String ticketId, String newStatus, String resolutionNotes, String technicianId, String technicianEmail) {
         Ticket ticket = getTicketById(ticketId);
 
-        if (!technicianId.equals(ticket.getAssignedTo())) {
-            throw new org.springframework.security.access.AccessDeniedException("You are not assigned to this ticket");
-        }
+        ensureTechnicianCanManageTicket(ticket, technicianId, technicianEmail);
 
         TicketStatus status = TicketStatus.valueOf(newStatus);
         ticket.setStatus(status);
@@ -346,12 +395,10 @@ public class TicketService {
         return enrichTicket(saved);
     }
 
-    public TicketResponse closeTicket(String ticketId, String resolutionNotes, String technicianId) {
+    public TicketResponse closeTicket(String ticketId, String resolutionNotes, String technicianId, String technicianEmail) {
         Ticket ticket = getTicketById(ticketId);
 
-        if (!technicianId.equals(ticket.getAssignedTo())) {
-            throw new org.springframework.security.access.AccessDeniedException("You are not assigned to this ticket");
-        }
+        ensureTechnicianCanManageTicket(ticket, technicianId, technicianEmail);
 
         ticket.setStatus(TicketStatus.CLOSED);
         if (resolutionNotes != null && !resolutionNotes.isBlank()) {
