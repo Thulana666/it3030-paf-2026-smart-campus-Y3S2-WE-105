@@ -53,6 +53,7 @@ const TechnicianTicketPanel = ({
   const [savingStatus, setSavingStatus] = useState(false);
   const [showCloseModal, setShowCloseModal] = useState(false);
   const [closingTicket, setClosingTicket] = useState(false);
+  // Tab management using explicit state for internal navigation
   const [activeTab, setActiveTab] = useState("chat"); // 'chat' | 'details'
 
   /* Sync if parent passes a new ticket */
@@ -199,6 +200,8 @@ const TechnicianTicketPanel = ({
   const isClosed = ["CLOSED", "RESOLVED", "REJECTED"].includes(ticket.status);
   const priorityMeta = PRIORITY_META[ticket.priority] || PRIORITY_META.LOW;
   const statusMeta = STATUS_META[ticket.status] || STATUS_META.OPEN;
+  const isCurrentTechnician =
+    ticket.assignedTo === user?.id || ticket.assignedTo === user?.email;
 
   /* ── Render ─────────────────────────────────────────────────────────────── */
   return (
@@ -229,7 +232,10 @@ const TechnicianTicketPanel = ({
             </button>
             <div>
               <div className="tech-panel-id">
-                #{String(ticket.id || "").slice(-8).toUpperCase()}
+                #
+                {String(ticket.id || "")
+                  .slice(-8)
+                  .toUpperCase()}
               </div>
               <h2 className="tech-panel-title">{ticket.title}</h2>
             </div>
@@ -690,7 +696,12 @@ const TechnicianTicketPanel = ({
               </div>
               <div className="tech-info-row">
                 <span>Assigned To</span>
-                <span>{ticket.assignedToName || "You"}</span>
+                <span>
+                  {isCurrentTechnician
+                    ? "You"
+                    : ticket.assignedToName ||
+                      (ticket.assignedTo ? "Assigned" : "Unassigned")}
+                </span>
               </div>
               <div className="tech-info-row">
                 <span>Created</span>

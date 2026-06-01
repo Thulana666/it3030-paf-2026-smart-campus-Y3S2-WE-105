@@ -26,7 +26,7 @@ public class TechnicianTicketController {
     public ResponseEntity<List<TicketResponse>> getAssignedTickets(
             @AuthenticationPrincipal CustomUserDetails userDetails) {
 
-        List<TicketResponse> responses = ticketService.getAssignedTickets(userDetails.getId());
+        List<TicketResponse> responses = ticketService.getAssignedTickets(userDetails.getId(), userDetails.getUsername());
         return ResponseEntity.ok(responses);
     }
 
@@ -49,7 +49,7 @@ public class TechnicianTicketController {
 
         String status = body.get("status");
         String notes  = body.getOrDefault("resolutionNotes", null);
-        TicketResponse response = ticketService.updateTicketStatus(id, status, notes, userDetails.getId());
+        TicketResponse response = ticketService.updateTicketStatus(id, status, notes, userDetails.getId(), userDetails.getUsername());
         return ResponseEntity.ok(response);
     }
 
@@ -60,7 +60,7 @@ public class TechnicianTicketController {
             @RequestParam String resolutionNotes,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
 
-        TicketResponse response = ticketService.resolveTicket(id, resolutionNotes, userDetails.getId());
+        TicketResponse response = ticketService.resolveTicket(id, resolutionNotes, userDetails.getId(), userDetails.getUsername());
         return ResponseEntity.ok(response);
     }
 
@@ -72,7 +72,7 @@ public class TechnicianTicketController {
             @AuthenticationPrincipal CustomUserDetails userDetails) {
 
         String notes = body != null ? body.getOrDefault("resolutionNotes", null) : null;
-        TicketResponse response = ticketService.closeTicket(id, notes, userDetails.getId());
+        TicketResponse response = ticketService.closeTicket(id, notes, userDetails.getId(), userDetails.getUsername());
         return ResponseEntity.ok(response);
     }
 
